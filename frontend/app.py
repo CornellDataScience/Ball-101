@@ -92,7 +92,7 @@ def change_state(state:int):
 
 st.session_state.state
 
-# Set home info page test
+# Set home info page test i
 match st.session_state.state:
     case -1: tips_page()
     case 0: main_page()
