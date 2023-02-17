@@ -2,7 +2,7 @@ import os
 from google.cloud import storage
 
 # GCS client setup
-client = storage.Client.from_servie_account_json('credentials.json')
+client = storage.Client.from_service_account_json('credentials.json')
 #bucket = client.get_bucket() #bucket name
 
 # upload
