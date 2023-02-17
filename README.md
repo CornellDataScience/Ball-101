@@ -7,23 +7,23 @@ Building a service for the community at large + low budget sports programs for S
 ├── data
 │   ├── gcs
 │   │   ├── gcs.py
-|   |   |── credentials.json
+│   │   │── credentials.json
 │   ├── local-data
 │   ├── models-data
 │   ├── parser.py
 ├── src
-|   ├── models
-|   ├── stats
-|   ├── view
-|   ├── config.py
-|   ├── main.py
-|   ├── state.py
+│   ├── models
+│   ├── stats
+│   ├── view
+│   ├── config.py
+│   ├── main.py
+│   ├── state.py
 ├── test
 ```
 
 ## Data 
 ### GCS
-Contains all Google Cloud requests and actions, hosts authentication, handles data loading () and unloading (ETL) to Google Cloud Storage
+Contains all Google Cloud requests and actions, hosts authentication, handles data loading and unloading (ETL) to Google Cloud Storage
 
 ### local-data
 Holds video file parsed through GCS (pkl format transformed into mp4 by GCS)
