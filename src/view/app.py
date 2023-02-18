@@ -19,7 +19,7 @@ if 'state' not in st.session_state:
 
 
 # Set up tab title and favicon
-st.set_page_config(page_title='Hoop Track', page_icon=':basketball:', initial_sidebar_state='collapsed')
+st.set_page_config(page_title='Hoop Track', page_icon=':basketball:')
 
 
 # Main Page
