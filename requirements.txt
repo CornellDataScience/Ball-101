@@ -1,5 +1,9 @@
 # TODO fix formatting, current stub is only YOLOv5 reqs + streamlit
-streamlit>=1.10.0
+
+
+# View Requirements
+streamlit>=1.18.1
+hydralit_components>= 1.0.10
 
 
 # YOLOv5 requirements
