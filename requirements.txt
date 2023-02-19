@@ -5,6 +5,8 @@
 streamlit>=1.18.1
 hydralit_components>= 1.0.10
 
+# GCS Requirements
+google-cloud-storage
 
 # YOLOv5 requirements
 # Usage: pip install -r requirements.txt

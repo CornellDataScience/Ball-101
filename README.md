@@ -5,45 +5,31 @@ Building a service for the community at large + low budget sports programs for S
 
 ```bash
 ├── data
-│   ├── gcs
-│   │   ├── gcs.py
-│   │   │── credentials.json
-│   ├── local-data
-│   ├── models-data
-│   ├── parser.py
+│   ├── gcs # google cloud storage requests and actions
+│   │   ├── gcs.py # handles data loading/unloading
+│   │   │── credentials.json # gcs authentication
+│   ├── local-data # model testing data
+│   ├── models-data # trained model data
+│   ├── loader.py # (optional) data loader
 ├── src
-│   ├── models
-│   ├── stats
-│   ├── view
-│   ├── config.py
+│   ├── config.json # global configs for models and stats
 │   ├── main.py
-│   ├── state.py
+│   ├── modelrunner.py
+│   ├── statrunner.py
+│   ├── state.py # object state of tracked game
+│   ├── utils.py
+├── models # ml models: yolov5 and opencv
+├── stats # calculations logic
+│   ├── statistics.py
+├── view # app frontend
+│   ├── app.py
 ├── test
 ```
 
-## Data 
-### GCS
-Contains all Google Cloud requests and actions, hosts authentication, handles data loading and unloading (ETL) to Google Cloud Storage
-
-### local-data
-Holds video file parsed through GCS (pkl format transformed into mp4 by GCS)
-
-### models-data
-Holds data for trained models
-
-### parser.py
-Performs data processing of the video file to be fed into models
-
-
-## src
-### models
-Holds the ML models that use YOLOv5/OpenCV for object detection and tracking. Takes in preprocessed data from parser
-
-### stats
-Logic for statistics calculations as the video is parsed and tracked. Currently contains one module (statistics.py) but may be expanded in the future to incorporate more detailed analytics.
-
-### view
-frontend of the app, built in streamlit
-
-### state.py
-holds the object state of the game being tracked (combine with stats package?)
+## Setup Instructions
+To get started, clone the repo and install requirements.txt in a Python>=3.8.0 environment.
+```
+git clone https://github.com/CornellDataScience/Ball-101
+cd Ball-101
+pip3 install -r requirements.txt
+```
