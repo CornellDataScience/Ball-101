@@ -5,4 +5,5 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from data.gcs import gcs
 
-print('ok')
+# Test upload
+gcs.upload_to_bucket('test_blob', '../data/local-data/demo_results.csv')
