@@ -36,8 +36,8 @@ st.set_page_config(page_title='Hoop Track', page_icon=':basketball:')
 # 2 : Done Processing, Show Statistics, Allow Exporting
 if 'state' not in st.session_state:
     st.session_state.state = 0
-    st.session_state.video_file = './data/local-data/demo_basketball.mov'
-    st.session_state.results = pd.read_csv('./data/local-data/demo_results.csv')
+    st.session_state.video_file = './view/media/demo_basketball.mov'
+    st.session_state.results = pd.read_csv('./view/media/demo_results.csv')
 
 
 
@@ -46,12 +46,17 @@ def main_page():
     st.markdown('''
         # HoopTrack
         A basketball analytics tracker built on YOLOv5 and OpenCV.
-        Simply upload a video in the side bar, click "Process Video," and the results will appear below.
+        Simply upload a video in the side bar and click "Process Video."
     ''')
-
     
     # send to tips page
     tips_button = st.button(label="Having Trouble?", on_click=change_state, args=(-1,))
+
+    # Basketball Icon Filler
+    col1, col2, col3 = st.columns([0.5,5,0.5])
+    with col2:
+        st.image(image='./view/media/basketball.png',use_column_width=True)
+
 
 # Tips Page
 def tips_page():
@@ -88,7 +93,7 @@ def processing_page():
 def results_page():
     st.markdown('''
         # Results
-        Here are the results you numb knuckles.
+        Here are the stats.
     ''')
 
     col1, col2 = st.columns(2)
@@ -114,12 +119,6 @@ def results_page():
         y=('2PA','3PA')
     )
 
-    st.bar_chart(
-        data=st.session_state.results,
-        x='PLAYER',
-        y='USG%'
-    )
-
     st.markdown('### Raw Data')
     st.write(st.session_state.results)
     st.download_button(label='Download CSV', data=st.session_state.results.to_csv(), file_name="results.csv")
@@ -130,13 +129,12 @@ def setup_sidebar():
 
     # Display upload file widget
     st.sidebar.markdown('# Upload')
-    st.sidebar.markdown('Upload a video')
     file_uploader = st.sidebar.file_uploader(label='Upload a video', type=['mp4', 'mov', 'wmv', 'avi', 'flv', 'mkv'], label_visibility='collapsed')
     if file_uploader is not None:
             update_video(file_uploader)
 
     # Display video they uploaded
-    st.sidebar.markdown('Your video')
+    st.sidebar.markdown('# Your video')
     st.sidebar.video(data=st.session_state.video_file)
 
     # Process options to move to next state

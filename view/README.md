@@ -9,19 +9,19 @@ pip install -r requirements.txt
 
 ### Running streamlit:
 ```
-streamlit run src/view/app.py
+streamlit run view/app.py
 ```
 
 ## How to use
 ### Uploading:
-![screenshot_of_home_page][https://github.com/CornellDataScience/Ball-101/blob/infra/src/view/screenshots/home.png]
+![screenshot of home page][https://github.com/CornellDataScience/Ball-101/blob/clean-infra/view/media/home.png]
 1. Upload a valid video file on the sidebar at the top left.
 2. Your video will load below it.
 3. Click "Process Video."
 4. You will be taken to a loading screen as we process the video.
 
 ### Exporting:
-![screenshot_of_results_page][https://github.com/CornellDataScience/Ball-101/blob/infra/src/view/screenshots/results.png]
+![screenshot of results page][https://github.com/CornellDataScience/Ball-101/blob/clean-infra/view/media/results.png]
 1. After processing, the results page will automatically appear.
 2. The results page provides summaries of the player and team data.
 3. At the bottom, you adn view and sort the raw data.
