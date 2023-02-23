@@ -36,8 +36,8 @@ st.set_page_config(page_title='Hoop Track', page_icon=':basketball:')
 # 2 : Done Processing, Show Statistics, Allow Exporting
 if 'state' not in st.session_state:
     st.session_state.state = 0
-    st.session_state.video_file = './view/media/demo_basketball.mov'
-    st.session_state.results = pd.read_csv('./view/media/demo_results.csv')
+    st.session_state.video_file = 'media/demo_basketball.mov'
+    st.session_state.results = pd.read_csv('media/demo_results.csv')
 
 
 
@@ -55,7 +55,7 @@ def main_page():
     # Basketball Icon Filler
     col1, col2, col3 = st.columns([0.5,5,0.5])
     with col2:
-        st.image(image='./view/media/basketball.png',use_column_width=True)
+        st.image(image='media/basketball.png',use_column_width=True)
 
 
 # Tips Page
