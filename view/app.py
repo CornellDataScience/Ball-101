@@ -148,7 +148,7 @@ def setup_sidebar():
     # Process options to move to next state
     col1, col2 = st.sidebar.columns([1,17])
     with st.sidebar.container():
-        consent_check = col1.checkbox(label="", label_visibility='hidden')
+        consent_check = col1.checkbox(label=" ", label_visibility='hidden')
         col2.caption("I have read and agree to HoopTrack's [terms of services.](https://github.com/CornellDataScience/Ball-101)")
     
     st.sidebar.button(label='Upload & Process Video',
