@@ -36,8 +36,9 @@ st.set_page_config(page_title='Hoop Track', page_icon=':basketball:')
 # 2 : Done Processing, Show Statistics, Allow Exporting
 if 'state' not in st.session_state:
     st.session_state.state = 0
-    st.session_state.video_file = 'media/demo_basketball.mov'
-    st.session_state.results = pd.read_csv('media/demo_results.csv')
+    st.session_state.logo = 'view/media/basketball.png'
+    st.session_state.video_file = 'view/media/demo_basketball.mov'
+    st.session_state.results = pd.read_csv('view/media/demo_results.csv')
 
 
 
@@ -55,7 +56,7 @@ def main_page():
     # Basketball Icon Filler
     col1, col2, col3 = st.columns([0.5,5,0.5])
     with col2:
-        st.image(image='media/basketball.png',use_column_width=True)
+        st.image(image=st.session_state.logo,use_column_width=True)
 
 
 # Tips Page
@@ -124,6 +125,13 @@ def results_page():
     st.download_button(label='Download CSV', data=st.session_state.results.to_csv(), file_name="results.csv")
     
 
+def error_page():
+    st.markdown('''
+        # Error: Webpage Not Found
+        Try reloading the page to fix the error.
+        ''')
+    st.button(label='Back to Home', on_click=change_state, args=(0,))
+
 # Sidebar
 def setup_sidebar():
 
@@ -138,12 +146,23 @@ def setup_sidebar():
     st.sidebar.video(data=st.session_state.video_file)
 
     # Process options to move to next state
-    st.sidebar.button(label='Process Video',use_container_width=True , on_click=change_state, args=(1,), type='primary')
+    col1, col2 = st.sidebar.columns([1,17])
+    with st.sidebar.container():
+        consent_check = col1.checkbox(label="", label_visibility='hidden')
+        col2.caption("I have read and agree to HoopTrack's [terms of services.](https://github.com/CornellDataScience/Ball-101)")
+    
+    st.sidebar.button(label='Upload & Process Video',
+                      disabled= not consent_check,
+                      use_container_width=True, 
+                      on_click=change_state, args=(1,), 
+                      type='primary')
 
     # Write Export Option when in results page
     if st.session_state.state == 2:
         st.sidebar.markdown('# Export')
         st.sidebar.download_button(label='Download CSV', use_container_width=True, data=st.session_state.results.to_csv(), file_name="results.csv")
+ 
+
 
 
 
@@ -152,11 +171,16 @@ def change_state(state:int):
 
 
 # Set home info page test
-match st.session_state.state:
-    case -1: tips_page()
-    case 0: main_page()
-    case 1: processing_page()
-    case 2: results_page()
+if st.session_state.state == -1:
+    tips_page()
+elif st.session_state.state == 0:
+    main_page()
+elif st.session_state.state == 1:
+    processing_page()
+elif st.session_state.state == 2:
+    results_page()
+else:
+    error_page()
 
 setup_sidebar()
 
