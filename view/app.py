@@ -1,28 +1,11 @@
 """
 Frontend
 """
-import time
 import streamlit as st
 import hydralit_components as hc
 import pandas as pd
-
-
-
-
-
-# Backend Connection -----------------------------------------
-
-# Send video to Google Cloud Storage
-def update_video(video_file):
-    st.session_state.video_file = video_file
-
-# Send request to Google Compute Machine
-def process_video(video_file):
-    time.sleep(5)
-    return video_file is not None
-
-# ------------------------------------------------------------
-
+import requests
+import io
 
 # Set up tab title and favicon
 st.set_page_config(page_title='Hoop Track', page_icon=':basketball:')
@@ -36,10 +19,27 @@ st.set_page_config(page_title='Hoop Track', page_icon=':basketball:')
 if 'state' not in st.session_state:
     st.session_state.state = 0
     st.session_state.logo = 'view/media/basketball.png'
-    st.session_state.video_file = 'view/media/demo_basketball.mov'
+    st.session_state.video_file = io.BytesIO(open('view/media/demo_basketball.mov', 'rb').read())
     st.session_state.results = pd.read_csv('view/media/demo_results.csv')
+    st.session_state.is_downloaded = False
+
+# Backend Connection -----------------------------------------
+SERVER_URL = "http://127.0.0.1:8000/"
+# Send request to Google Compute Machine
+def process_video(video_file):
+    requests.post(SERVER_URL+"upload", files={"video_file": video_file})
+    st.session_state.is_downloaded = False
+    return video_file is not None
 
 
+def fetch_csv():
+    if (not st.session_state.is_downloaded):
+        out = requests.get(SERVER_URL+"results")
+        st.session_state.results = pd.read_csv(io.StringIO(out.content.decode()))
+    st.session_state.is_downloaded = True
+    return st.session_state.results.to_csv()
+    
+# ------------------------------------------------------------
 
 # Main Page
 def main_page():
@@ -120,7 +120,7 @@ def results_page():
     st.write(st.session_state.results)
     st.download_button(
         label='Download CSV',
-        data=st.session_state.results.to_csv(),
+        data=fetch_csv(),
         file_name="results.csv")
 
 # Error Page
@@ -165,12 +165,16 @@ def setup_sidebar():
         st.sidebar.download_button(
             label='Download CSV',
             use_container_width=True,
-            data=st.session_state.results.to_csv(),
+            data=fetch_csv(),
             file_name="results.csv")
 
 # Call back function to change page
 def change_state(state:int):
     st.session_state.state = state
+
+# Updates video on screen
+def update_video(video_file):
+    st.session_state.video_file = video_file
 
 # Set home info page test
 if st.session_state.state == -1:

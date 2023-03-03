@@ -21,6 +21,13 @@ def upload_to_bucket(blob_name, file_path):
     except Exception as e:
         print(e)
 
+def upload_file_to_bucket(blob_name, file):
+    try:
+        blob = bucket.blob(blob_name)
+        blob.upload_from_file(file)
+    except Exception as e:
+        print(e)
+
 # Download
 def download_from_bucket(blob_name, file_path):
     try:

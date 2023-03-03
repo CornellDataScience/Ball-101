@@ -33,3 +33,5 @@ git clone https://github.com/CornellDataScience/Ball-101
 cd Ball-101
 pip3 install -r requirements.txt
 ```
+
+<div style="width: 640px; height: 480px; margin: 10px; position: relative;"><iframe allowfullscreen frameborder="0" style="width:640px; height:480px" src="https://lucid.app/documents/embedded/5283e500-286d-4b60-9a31-6ab294866694" id="M3xyY~qxCJ1e"></iframe></div>

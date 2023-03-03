@@ -1,6 +1,7 @@
-# TODO fix formatting, current stub is only YOLOv5 reqs + streamlit
-
-
+# API Requirements
+fastapi>=0.92.0
+uvicorn[standard]>=0.17.*
+python-multipart
 # View Requirements
 streamlit>=1.18.1
 hydralit_components>= 1.0.10
