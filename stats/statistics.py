@@ -1,4 +1,6 @@
 """
 Module for statistics computation logic
 """
-import state
+from src import state
+
+game = state.StatState

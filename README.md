@@ -1,13 +1,14 @@
 # Ball-101
-Building a service for the community at large + low budget sports programs for Sports Analytics and Stats Tracking
+Building a service for the community at large + low budget sports programs for Sports Analytics and Stats Tracking.
 
 ## Project Structure
 
 ```bash
+├── api
+│   ├── backend.py # fastapi backend server
+│   ├── credentials.json # gcs authentication
+│   ├── gcs.py # google cloud storage loading/unloading
 ├── data
-│   ├── gcs # google cloud storage requests and actions
-│   │   ├── gcs.py # handles data loading/unloading
-│   │   │── credentials.json # gcs authentication
 │   ├── local-data # model testing data
 │   ├── models-data # trained model data
 │   ├── loader.py # (optional) data loader
@@ -33,5 +34,13 @@ git clone https://github.com/CornellDataScience/Ball-101
 cd Ball-101
 pip3 install -r requirements.txt
 ```
+Fill in GCS credentials under api/credentials.json.
 
-<div style="width: 640px; height: 480px; margin: 10px; position: relative;"><iframe allowfullscreen frameborder="0" style="width:640px; height:480px" src="https://lucid.app/documents/embedded/5283e500-286d-4b60-9a31-6ab294866694" id="M3xyY~qxCJ1e"></iframe></div>
+Start the server backend by running
+```
+cd api
+uvicorn backend:app --reload
+```
+
+## LucidChart Pipeline Diagram 
+https://lucid.app/documents/embedded/5283e500-286d-4b60-9a31-6ab294866694?invitationId=inv_28b23f10-a3e4-4131-b291-fa378f5a1b4e#

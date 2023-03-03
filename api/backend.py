@@ -1,10 +1,12 @@
-import uvicorn
+"""
+Backend module built in FastAPI
+"""
+import time
+import io
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import StreamingResponse
 import pandas as pd
-import io
 import gcs
-import time
 
 app = FastAPI()
 
@@ -13,12 +15,14 @@ app = FastAPI()
 async def root():
     return {"message": "welcome to hooptracker backend"}
 
-# Upload a video file to gcs bucket
+
+# Upload video file to GCS bucket
 @app.post("/upload")
 async def upload_file(video_file: UploadFile = File(...)):
-    blob_name = "test-blob"
+    blob_name = time.strftime("%H%M%S-%Y%m%d")
     gcs.upload_file_to_bucket(blob_name, video_file.file)
     return {"message": "Upload success"}
+
 
 # Fetch results CSV
 @app.get("/results")
@@ -29,6 +33,3 @@ async def get_results():
     response = StreamingResponse(io.StringIO(dummy_df.to_csv(index=False)), media_type="text/csv")
     response.headers["Content-Disposition"] = "attachment; filename=export.csv"
     return response
-
-def start():
-    uvicorn.run("backend:app", host="localhost", port=8888, reload=True)
