@@ -1,1 +1,0 @@
-andy is a WHORE
