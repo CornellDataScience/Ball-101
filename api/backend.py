@@ -16,17 +16,21 @@ async def root():
     return {"message": "welcome to hooptracker backend"}
 
 
-# Upload video file to GCS bucket
 @app.post("/upload")
 async def upload_file(video_file: UploadFile = File(...)):
-    blob_name = time.strftime("%H%M%S-%Y%m%d")
+    """
+    Upload video file to GCS bucket
+    """
+    blob_name = time.strftime("%Y%m%d-%H%M%S")
     gcs.upload_file_to_bucket(blob_name, video_file.file)
-    return {"message": "Upload success"}
+    return {"message": blob_name, "status": "success"}
 
 
-# Fetch results CSV
 @app.get("/results")
 async def get_results():
+    """
+    Fetch the results csv from statistics
+    """
     dummy_df = pd.read_csv('dummy.csv') # replace with stat logic
     stream = io.StringIO()
     dummy_df.to_csv(stream, index=False)

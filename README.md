@@ -11,15 +11,16 @@ Building a service for the community at large + low budget sports programs for S
 ├── data
 │   ├── local-data # model testing data
 │   ├── models-data # trained model data
-│   ├── loader.py # (optional) data loader
 ├── src
 │   ├── config.json # global configs for models and stats
-│   ├── main.py
+│   ├── main.py # control loop module
 │   ├── modelrunner.py
 │   ├── statrunner.py
 │   ├── state.py # object state of tracked game
 │   ├── utils.py
-├── models # ml models: yolov5 and opencv
+├── model # ml models: yolov5 and opencv
+│   ├── temp # stores user data
+│   ├── yolov5
 ├── stats # calculations logic
 │   ├── statistics.py
 ├── view # app frontend
