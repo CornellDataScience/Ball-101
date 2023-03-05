@@ -1,49 +1,47 @@
 # Ball-101
-Building a service for the community at large + low budget sports programs for Sports Analytics and Stats Tracking
+Building a service for the community at large + low budget sports programs for Sports Analytics and Stats Tracking.
 
 ## Project Structure
 
 ```bash
+├── api
+│   ├── backend.py # fastapi backend server
+│   ├── credentials.json # gcs authentication
+│   ├── gcs.py # google cloud storage loading/unloading
 ├── data
-│   ├── gcs
-│   │   ├── gcs.py
-│   │   │── credentials.json
-│   ├── local-data
-│   ├── models-data
-│   ├── parser.py
+│   ├── local-data # model testing data
+│   ├── models-data # trained model data
 ├── src
-│   ├── models
-│   ├── stats
-│   ├── view
-│   ├── config.py
-│   ├── main.py
-│   ├── state.py
+│   ├── config.json # global configs for models and stats
+│   ├── main.py # control loop module
+│   ├── modelrunner.py
+│   ├── statrunner.py
+│   ├── state.py # object state of tracked game
+│   ├── utils.py
+├── model # ml models: yolov5 and opencv
+│   ├── temp # stores user data
+│   ├── yolov5
+├── stats # calculations logic
+│   ├── statistics.py
+├── view # app frontend
+│   ├── app.py
 ├── test
 ```
 
-## Data 
-### GCS
-Contains all Google Cloud requests and actions, hosts authentication, handles data loading and unloading (ETL) to Google Cloud Storage
+## Setup Instructions
+To get started, clone the repo and install requirements.txt in a Python>=3.8.0 environment.
+```
+git clone https://github.com/CornellDataScience/Ball-101
+cd Ball-101
+pip3 install -r requirements.txt
+```
+Fill in GCS credentials under api/credentials.json.
 
-### local-data
-Holds video file parsed through GCS (pkl format transformed into mp4 by GCS)
+Start the server backend by running
+```
+cd api
+uvicorn backend:app --reload
+```
 
-### models-data
-Holds data for trained models
-
-### parser.py
-Performs data processing of the video file to be fed into models
-
-
-## src
-### models
-Holds the ML models that use YOLOv5/OpenCV for object detection and tracking. Takes in preprocessed data from parser
-
-### stats
-Logic for statistics calculations as the video is parsed and tracked. Currently contains one module (statistics.py) but may be expanded in the future to incorporate more detailed analytics.
-
-### view
-frontend of the app, built in streamlit
-
-### state.py
-holds the object state of the game being tracked (combine with stats package?)
+## LucidChart Pipeline Diagram 
+https://lucid.app/documents/embedded/5283e500-286d-4b60-9a31-6ab294866694?invitationId=inv_28b23f10-a3e4-4131-b291-fa378f5a1b4e#
