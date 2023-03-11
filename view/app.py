@@ -1,16 +1,18 @@
 """
 Frontend
 """
+from src import main
+import io
+import sys
+import os
 import streamlit as st
 import hydralit_components as hc
 import pandas as pd
 import requests
-import io
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Set up tab title and favicon
-st.set_page_config(page_title='Hoop Track', page_icon=':basketball:')
-
-
+st.set_page_config(page_title='HoopTracker', page_icon=':basketball:')
 
 # Initialize Session State
 # 0 : Default State : No Video Uploaded --> Prompts For Upload / Home Screen Demo
@@ -19,32 +21,51 @@ st.set_page_config(page_title='Hoop Track', page_icon=':basketball:')
 if 'state' not in st.session_state:
     st.session_state.state = 0
     st.session_state.logo = 'view/media/basketball.png'
-    st.session_state.video_file = io.BytesIO(open('view/media/demo_basketball.mov', 'rb').read())
+    st.session_state.video_file = io.BytesIO(
+        open('view/media/demo_basketball.mov', 'rb').read())
     st.session_state.results = pd.read_csv('view/media/demo_results.csv')
     st.session_state.is_downloaded = False
+    st.session_state.upload_name = None
+
 
 # Backend Connection -----------------------------------------
 SERVER_URL = "http://127.0.0.1:8000/"
 # Send request to Google Compute Machine
+
+
 def process_video(video_file):
-    requests.post(SERVER_URL+"upload", files={"video_file": video_file})
+    response = requests.post(SERVER_URL+"upload",
+                             files={"video_file": video_file}, timeout=30)
+    if response.status_code == 200:
+        data = response.json()
+        st.session_state.upload_name = data.get('message')
+    else:
+        # maybe make an error handler in frontend
+        print('error uploading file')
     st.session_state.is_downloaded = False
     return video_file is not None
 
 
 def fetch_csv():
-    if (not st.session_state.is_downloaded):
-        out = requests.get(SERVER_URL+"results")
-        st.session_state.results = pd.read_csv(io.StringIO(out.content.decode()))
+    if not st.session_state.is_downloaded:
+        out = requests.get(SERVER_URL+"results", timeout=30)
+        st.session_state.results = pd.read_csv(
+            io.StringIO(out.content.decode()))
     st.session_state.is_downloaded = True
     return st.session_state.results.to_csv()
-    
+
+
+def fetch_processed_video():
+    return main.pull_user_video(st.session_state.upload_name)
+
 # ------------------------------------------------------------
 
 # Main Page
+
+
 def main_page():
     st.markdown('''
-        # HoopTrack
+        # HoopTracker
         A basketball analytics tracker built on YOLOv5 and OpenCV.
         Simply upload a video in the side bar and click "Process Video."
     ''')
@@ -53,9 +74,9 @@ def main_page():
     st.button(label="Having Trouble?", on_click=change_state, args=(-1,))
 
     # Basketball Icon Filler
-    _, col2, _ = st.columns([0.5,5,0.5])
+    _, col2, _ = st.columns([0.5, 5, 0.5])
     with col2:
-        st.image(image=st.session_state.logo,use_column_width=True)
+        st.image(image=st.session_state.logo, use_column_width=True)
 
 
 # Tips Page
@@ -72,6 +93,8 @@ def tips_page():
     st.button(label='Back to Home', on_click=change_state, args=(0,))
 
 # Loading Screen
+
+
 def processing_page():
     st.markdown('''
         # Processing...
@@ -87,7 +110,11 @@ def processing_page():
     st.experimental_rerun()
 
 # Display Data
+
+
 def results_page():
+    st.video(open(fetch_processed_video(), 'rb').read())
+
     st.markdown('''
         # Results
         Here are the stats.
@@ -109,11 +136,10 @@ def results_page():
             y=('TO')
         )
 
-
     st.bar_chart(
         data=st.session_state.results,
         x='PLAYER',
-        y=('2PA','3PA')
+        y=('2PA', '3PA')
     )
 
     st.markdown('### Raw Data')
@@ -124,12 +150,15 @@ def results_page():
         file_name="results.csv")
 
 # Error Page
+
+
 def error_page():
     st.markdown('''
         # Error: Webpage Not Found
         Try reloading the page to fix the error.
         ''')
     st.button(label='Back to Home', on_click=change_state, args=(0,))
+
 
 def setup_sidebar():
     # Display upload file widget
@@ -146,15 +175,15 @@ def setup_sidebar():
     st.sidebar.video(data=st.session_state.video_file)
 
     # Process options to move to next state
-    col1, col2 = st.sidebar.columns([1,17])
+    col1, col2 = st.sidebar.columns([1, 17])
     consent_check = col1.checkbox(label=" ", label_visibility='hidden')
     col2.caption('''
-        I have read and agree to HoopTrack's
+        I have read and agree to HoopTracker's
         [terms of services.](https://github.com/CornellDataScience/Ball-101)
     ''')
 
     st.sidebar.button(label='Upload & Process Video',
-                      disabled= not consent_check,
+                      disabled=not consent_check,
                       use_container_width=True,
                       on_click=change_state, args=(1,),
                       type='primary')
@@ -169,12 +198,17 @@ def setup_sidebar():
             file_name="results.csv")
 
 # Call back function to change page
-def change_state(state:int):
+
+
+def change_state(state: int):
     st.session_state.state = state
 
 # Updates video on screen
+
+
 def update_video(video_file):
     st.session_state.video_file = video_file
+
 
 # Set home info page test
 if st.session_state.state == -1:
