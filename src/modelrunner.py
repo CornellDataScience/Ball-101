@@ -5,4 +5,4 @@ from yolov5
 
 
 def run_models():
-    detect.run(project=models/temp)  # YOLOv5
+    detect.run(source="", project=models/temp)  # YOLOv5
