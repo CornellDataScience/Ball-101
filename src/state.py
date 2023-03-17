@@ -17,7 +17,6 @@ class StatState:
     def inc_score(self, team, value):
         """
         Updates the scores of the team that scored.
-        
         Parameters: 
         team (int): 1 or 2.
         value (int): 2 or 3.
