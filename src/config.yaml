@@ -1,6 +1,3 @@
-function_params:
-  frames: 30
-
 vars_:
   download_path: 'model/temp/user.mp4'
 

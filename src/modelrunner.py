@@ -11,7 +11,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 def run_models(user_file_path, model_configs):
     """
     Takes the downloaded video from user_file_path and feeds to YOLOV5.
-    Returns the path of the processed (and reencoded) video file, currently titled "new.mp4".
+    Returns the path of the processed (and reencoded) video file.
     """
     model_vars = model_configs
     export_path = model_vars['export_path']
@@ -39,11 +39,11 @@ def reencode(input_path, output_path):
 
 def drop_frames(input_path, reduction_factor):
     """
-    Alters the input video fps to to 1 / reduction_factor.
+    Alters the input video fps to 1 / reduction_factor.
     """
     video = cv2.VideoCapture(input_path)
     nframes = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-    output_video = cv2.VideoWriter('model/temp/user2.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 
+    output_video = cv2.VideoWriter('model/temp/user2.mp4', cv2.VideoWriter_fourcc(*'mp4v'),
                                    int(video.get(cv2.CAP_PROP_FPS)/2), (int(video.get(
         cv2.CAP_PROP_FRAME_WIDTH)), int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))))
     for i in range(nframes):

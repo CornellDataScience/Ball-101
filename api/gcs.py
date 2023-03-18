@@ -12,6 +12,7 @@ bucket = storage_client.get_bucket('app_user_upload')
 
 
 def change_bucket(bucket_name):
+    """Change the current GCS bucket to upload to/download from."""
     try:
         global bucket
         bucket = storage_client.get_bucket(bucket_name)
@@ -19,8 +20,8 @@ def change_bucket(bucket_name):
         print(e)
 
 
-# Upload using path
 def upload_to_bucket(blob_name, file_path):
+    """Upload through file path"""
     try:
         blob = bucket.blob(blob_name)
         blob.upload_from_filename(file_path)
@@ -28,8 +29,8 @@ def upload_to_bucket(blob_name, file_path):
         print(e)
 
 
-# Upload using name
 def upload_file_to_bucket(blob_name, file):
+    """Upload through file name"""
     try:
         blob = bucket.blob(blob_name)
         blob.upload_from_file(file)
@@ -37,8 +38,8 @@ def upload_file_to_bucket(blob_name, file):
         print(e)
 
 
-# Download
 def download_from_bucket(blob_name, file_path):
+    """Download to file path"""
     try:
         blob = bucket.blob(blob_name)
         blob.download_to_filename(file_path)
