@@ -13,6 +13,7 @@ bucket = storage_client.get_bucket('app_user_upload')
 
 def change_bucket(bucket_name):
     try:
+        global bucket
         bucket = storage_client.get_bucket(bucket_name)
     except Exception as e:
         print(e)
