@@ -16,4 +16,4 @@ def sample_compute():
     """
     pass
 
-game = state.StatState
+Game = state.StatState()

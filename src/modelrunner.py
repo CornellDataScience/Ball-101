@@ -4,24 +4,16 @@ Runner module for ML models
 import sys
 import os
 from model.yolov5 import detect
-import yaml
 import cv2
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
-def load_config(path):
-    with open(path, 'r') as f:
-        config = yaml.safe_load(f)
-    return config
-
-
-def run_models(user_file_path):
+def run_models(user_file_path, model_configs):
     """
     Takes the downloaded video from user_file_path and feeds to YOLOV5.
     Returns the path of the processed (and reencoded) video file, currently titled "new.mp4".
     """
-    config = load_config('src/config.yaml')
-    model_vars = config['model_vars']
+    model_vars = model_configs
     export_path = model_vars['export_path']
     name = model_vars['name']
     output_file_name = model_vars['output_file_name']

@@ -1,7 +1,6 @@
 """
 Module containing state of game statistics
 """
-
 class StatState:
     """
     State class holding player positions, ball position, and team scores

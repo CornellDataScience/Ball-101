@@ -24,26 +24,28 @@ def pull_user_video(file_name):
     Pulls video from GCS bucket.
     """
     config = load_config('src/config.yaml')
-    vars_ = config['vars']
+    vars_ = config['vars_']
     download_path = vars_['download_path']
     gcs.download_from_bucket(file_name, download_path)
     return download_path
 
 
-def main(file_name):
+def main(file_name, file_path=None):
     """
     Main control loop. Currently returns the path of the processed video.
+    For normal executions, file_name refers to the timestamped name of the uploaded file.
+    file_path is only specified when CI testing. 
     """
-    download_path = pull_user_video(file_name)
-    processed_path = modelrunner.run_models(download_path)
-    statrunner.run_statistics(processed_path)
-    return processed_path
-
-
-def _ci_main(file_path):
-    processed_path = modelrunner.run_models(file_path)
+    config = load_config('src/config.yaml')
+    model_vars = config['model_vars']
+    if file_path is None:
+        download_path = pull_user_video(file_name)
+        processed_path = modelrunner.run_models(download_path, model_vars)    
+    else:
+        processed_path = modelrunner.run_models(file_path, model_vars)
     statrunner.run_statistics(processed_path)
     print(f'Model run complete. The output can be found at: {processed_path}')
+    return processed_path
 
 
 if __name__ == "__main__":
@@ -52,4 +54,4 @@ if __name__ == "__main__":
     parser.add_argument('--ci', metavar='file_path', type=str, required=True,
              help='path of the file to run processing through')
     args = parser.parse_args()
-    _ci_main(args.ci)
+    main(None, file_path=args)
