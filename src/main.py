@@ -54,4 +54,4 @@ if __name__ == "__main__":
     parser.add_argument('--ci', metavar='file_path', type=str, required=True,
              help='path of the file to run processing through')
     args = parser.parse_args()
-    main(None, file_path=args)
+    main(None, file_path=args.ci)
