@@ -19,11 +19,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     - name: Initialising credentials
-      run: cat /home/runner/work/Ball-101/api/credentials.json | base64
+      run: cat /home/runner/work/Ball-101/Ball-101/api/credentials.json | base64
     - name: Putting data
       env:
         DATA: ${{ secrets.GOOGLE_SERVICES_JSON }}
-      run: echo $DATA > /home/runner/work/Ball-101/api/credentials.json
+      run: echo $DATA > /home/runner/work/Ball-101/Ball-101/api/credentials.json
     - name: Run CI tests
       run: |
         python src/main.py --ci model/temp/user.mp4
