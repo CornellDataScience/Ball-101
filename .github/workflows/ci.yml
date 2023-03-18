@@ -26,8 +26,8 @@ jobs:
       run: echo $DATA > /home/runner/work/Ball-101/Ball-101/api/credentials.json
     - name: Run CI tests
       run: |
-        python src/main.py --ci model/temp/user.mp4
-        if [ ! -f model/temp/output/new.mp4 ]; then
+        python src/main.py --ci ${{github.workspace}}/model/temp/user.mp4
+        if [ ! -f ${{github.workspace}}/model/temp/output/new.mp4 ]; then
           echo "model run failed: output does not exist"
           exit 1
         fi
