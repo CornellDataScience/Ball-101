@@ -1,0 +1,9 @@
+vars_:
+  download_path: 'model/temp/user.mp4'
+
+model_vars:
+  export_path: 'model/temp'
+  name: 'output'
+  output_file_name: 'user.mp4'
+  file_name: 'new.mp4'
+  frame_reduction_factor: 2
