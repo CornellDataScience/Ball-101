@@ -7,7 +7,8 @@ import argparse
 import yaml
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from api import gcs
-from src import modelrunner, statrunner
+from src import modelrunner
+from src.statrunner import StatRunner
 
 
 def load_config(path):
@@ -40,10 +41,11 @@ def main(file_name, file_path=None):
     model_vars = config['model_vars']
     if file_path is None:
         download_path = pull_user_video(file_name)
-        processed_path = modelrunner.run_models(download_path, model_vars)    
+        processed_path = modelrunner.run_models(download_path, model_vars)
     else:
         processed_path = modelrunner.run_models(file_path, model_vars)
-    statrunner.run_statistics(processed_path)
+    statrunner = StatRunner(processed_path)
+    statrunner.run()
     print(f'Model run complete. The output can be found at: {processed_path}')
     return processed_path
 
