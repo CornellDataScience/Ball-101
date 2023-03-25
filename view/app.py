@@ -50,7 +50,7 @@ def fetch_csv():
     return st.session_state.results.to_csv()
 
 def fetch_processed_video():
-    return main.pull_user_video(st.session_state.upload_name)
+    return main.main(st.session_state.upload_name)
 
 # ------------------------------------------------------------
 
