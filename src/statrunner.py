@@ -13,9 +13,11 @@ class StatRunner:
     Runner class taking in the video file path and running two passes of
     processing in sequence. 
     """
-    def __init__(self, video_path):
+    def __init__(self, video_path, text_path, stat_configs):
         self.video_path = video_path
-        self.stat_state = StatState()
+        self.text_path = text_path
+        self.stat_vars = stat_configs
+        self.stat_state = StatState(text_path)
 
 
     def run_general_stats(self):

@@ -2,11 +2,11 @@ vars_:
   download_path: 'model/temp/user.mp4'
 
 model_vars:
-  export_path: 'model/temp'
-  name: 'output'
-  output_file_name: 'user.mp4'
-  file_name: 'new.mp4'
+  export_directory: 'model/temp'
+  export_folder_name: 'output'
+  export_filename: 'user.mp4'
+  reencoded_filename: 'new.mp4'
   frame_reduction_factor: 2
 
-state_vars:
+stat_vars:
   player_init_frame: 150
