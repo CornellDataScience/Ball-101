@@ -6,7 +6,7 @@ import sys
 import argparse
 import yaml
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-#from api import gcs
+from api import gcs
 from src.modelrunner import ModelRunner
 from src.statrunner import StatRunner
 
