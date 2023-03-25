@@ -14,8 +14,8 @@ def load_config(path):
     """
     Loads the config yaml file to read in parameters and settings.
     """
-    with open(path, 'r') as f:
-        config = yaml.safe_load(f)
+    with open(path, 'r') as file:
+        config = yaml.safe_load(file)
     return config
 
 
