@@ -1,10 +1,16 @@
-# TODO fix formatting, current stub is only YOLOv5 reqs + streamlit
-streamlit>=1.10.0
+# API Requirements
+fastapi>=0.92.0
+uvicorn[standard]>=0.17.*
+python-multipart
 
+# View Requirements
+streamlit>=1.18.1
+hydralit_components>= 1.0.10
+
+# GCS Requirements
+google-cloud-storage
 
 # YOLOv5 requirements
-# Usage: pip install -r requirements.txt
-
 # Base ------------------------------------------------------------------------
 gitpython
 ipython  # interactive notebook
@@ -53,3 +59,8 @@ wheel>=0.38.0 # Snyk vulnerability fix
 # pycocotools>=2.0.6  # COCO mAP
 # roboflow
 # ultralytics  # HUB https://hub.ultralytics.com
+
+# Others
+pylint
+pyyaml
+argparse
