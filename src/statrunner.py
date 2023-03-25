@@ -1,9 +1,9 @@
 """
 Runner module for statistics logic
 """
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import sys
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from stats.general_stats import GeneralStatsProcessor
 from stats.team_stats import TeamStatsProcessor
 from src.state import StatState
