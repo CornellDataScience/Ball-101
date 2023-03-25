@@ -7,3 +7,6 @@ model_vars:
   output_file_name: 'user.mp4'
   file_name: 'new.mp4'
   frame_reduction_factor: 2
+
+state_vars:
+  player_init_frame: 150
