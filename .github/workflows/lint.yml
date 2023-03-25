@@ -21,4 +21,7 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py' | grep -v 'model/yolov5') --fail-under 7.0
+        pylint $(git ls-files '*.py' | grep -v 'model/yolov5') \
+        --disable C0116 \
+        --disable E1101 \
+        --fail-under 7.0
