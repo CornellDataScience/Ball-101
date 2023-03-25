@@ -70,8 +70,21 @@ def connections(pos_lst, players):
         connects[name] += 1
     return connects
 
-def possible_teams(players, numpeople):
-    pass
+def possible_teams(players):
+    numpeople = len(players)
+    pplperteam = numpeople/2
+    acc = []
+    def permutation(i, t):
+        if i >= numpeople:
+            return
+        if len(t) == pplperteam:
+            acc.append((t, (set(players) - set(t))))
+        else:
+            permutation(i+1, t.copy())
+            t.add(players[i])
+            permutation(i+1, t.copy())
+    permutation(0, set())
+    return acc
 
 def team_split(state):
     '''
@@ -87,14 +100,13 @@ def team_split(state):
     pos_lst = possession_list(state, players)
     state.possession_list = pos_lst
     connects = connections(pos_lst, players)
-    # teams = divide all possible teams
     teams = possible_teams(players, numpeople)
     bestteam = None
     minCount = 0
     for team in teams:
         count = 0
-        team1 = team[0]
-        team2 = team[1]
+        team1 = list(team[0])
+        team2 = list(team[1])
         for player1 in team1:
             for player2 in team2:
                 count += connects[player1 + player2]
