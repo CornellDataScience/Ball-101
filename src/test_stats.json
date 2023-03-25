@@ -1,0 +1,26 @@
+[
+    {
+        "shots attempted": 7,
+        "shots made": 3,
+        "blue shirt to white shirt": 0,
+        "blue shirt to white hoodie": 0,
+        "blue shirt to grey shirt": 0,
+        "blue shirt to black shirt": 0,
+        "white shirt to blue shirt": 0,
+        "white shirt to white hoodie": 1,
+        "white shirt to grey shirt": 1,
+        "white shirt to black shirt": 1,
+        "white hoodie to blue shirt": 0,
+        "white hoodie to white shirt": 3,
+        "white hoodie to grey shirt": 3,
+        "white hoodie to black shirt": 1,
+        "grey shirt to blue shirt": 0,
+        "grey shirt to white shirt": 0,
+        "grey shirt to white hoodie": 5,
+        "grey shirt to black shirt": 0,
+        "black shirt to blue shirt": 0,
+        "black shirt to white shirt": 1,
+        "black shirt to white hoodie": 2,
+        "black shirt to grey shirt": 1
+    }
+]
