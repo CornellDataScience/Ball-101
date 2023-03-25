@@ -1,3 +1,5 @@
+# Taken from https://www.educative.io/answers/how-to-create-a-linked-list-in-python
+
 class Node:
     def __init__(self, data=None, next=None):
         self.data = data
