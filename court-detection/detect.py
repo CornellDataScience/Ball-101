@@ -1,8 +1,9 @@
 import os
 import cv2 as cv
 import numpy as np
-
-TEMP_PATH = os.path.join('court-detection','temp')
+    
+PATH = os.path.join('models','court-detection')
+TEMP_PATH = os.path.join(PATH,'temp')
 VIDEO_PATH = os.path.join(TEMP_PATH,'demo.mov')
 COURT_PATH = os.path.join(TEMP_PATH,'court.jpeg')
 TEMPLATE_PATH = os.path.join(TEMP_PATH,'template.jpeg')
@@ -69,8 +70,8 @@ def main():
     cv.imshow('canny', canny_edges)
     cv.imshow('canny masked', masked_edges)
     cv.imshow('hough transform', hough)
-    # cv.imshow('matched image', matched)
-    # cv.imshow('warped image', warped_img)
+    cv.imshow('matched image', matched)
+    cv.imshow('warped image', warped_img)
 
     if cv.waitKey(0) & 0xff == 27:
         cv.destroyAllWindows()
@@ -161,7 +162,7 @@ def thicken_edges(img:np.ndarray, iterations:int=2):
 
 # Returns list of lines to draw through hough transform
 # Preconditino: Should be 8-bit grayscale image
-def get_hough(img:np.ndarray,rho:float=1,theta:float=np.pi/180,threshold:int=200):
+def get_hough(img:np.ndarray,rho:float=1,theta:float=np.pi/180,threshold:int=150):
     return cv.HoughLines(img, rho, theta, threshold)
 
 def apply_hough(img:np.ndarray, lines:list):
@@ -173,7 +174,7 @@ def apply_hough(img:np.ndarray, lines:list):
         x1, y1 = int(x0 + 2000*(-b)), int(y0 + 2000*(a))
         x2, y2 = int(x0 - 2000*(-b)), int(y0 - 2000*(a)) 
         cv.line(out,(x1,y1),(x2,y2),[0,0,255])
-    print(len(lines))
+
     return out
 
 def match_keypoints(gray_source:np.ndarray, gray_truth:np.ndarray):
