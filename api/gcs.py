@@ -16,8 +16,8 @@ def change_bucket(bucket_name):
     try:
         global bucket
         bucket = storage_client.get_bucket(bucket_name)
-    except Exception as ex:
-        print(ex)
+    except Exception as error:
+        print(error)
 
 
 def upload_to_bucket(blob_name, file_path):
@@ -25,8 +25,8 @@ def upload_to_bucket(blob_name, file_path):
     try:
         blob = bucket.blob(blob_name)
         blob.upload_from_filename(file_path)
-    except Exception as ex:
-        print(ex)
+    except Exception as error:
+        print(error)
 
 
 def upload_file_to_bucket(blob_name, file):
@@ -34,8 +34,8 @@ def upload_file_to_bucket(blob_name, file):
     try:
         blob = bucket.blob(blob_name)
         blob.upload_from_file(file)
-    except Exception as ex:
-        print(ex)
+    except Exception as error:
+        print(error)
 
 
 def download_from_bucket(blob_name, file_path):
@@ -43,5 +43,5 @@ def download_from_bucket(blob_name, file_path):
     try:
         blob = bucket.blob(blob_name)
         blob.download_to_filename(file_path)
-    except Exception as ex:
-        print(ex)
+    except Exception as error:
+        print(error)
