@@ -56,6 +56,9 @@ class ModelRunner:
 
 
     def run(self):
+        """
+        Executes YOLOV5 models and its related video pre- and post- processing.
+        """
         self.drop_frames(f'{self.export_directory}/{self.export_filename}')
         detect.run(source=self.video_path, project=self.export_directory,
                name=self.export_folder_name, exist_ok=True)
@@ -65,8 +68,8 @@ class ModelRunner:
 
     def get_processed_video(self):
         """Fetches the location of the processed video."""
-        return os.path.join(self.export_directory, self.export_folder_name, self.export_filename)
-    
+        return os.path.join(self.export_directory, self.export_folder_name, self.reencoded_filename)
+
     def get_text_output(self):
-        """Returns the location of the model text output."""
+        """TODO Returns the location of the model text output."""
         return None

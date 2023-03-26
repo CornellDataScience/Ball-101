@@ -12,7 +12,7 @@ class GeneralStatsProcessor:
     def __init__(self, video_path, stat_state: StatState):
         self.video_path = video_path
         self.stat_state = stat_state
-    
+
 
     def detect_teams(self):
         # Team detection, update self.stat_state
