@@ -27,6 +27,8 @@ def curr_possession(players, ball):
         curr_xmax = min(pcoords.get("xmax"), bxmax)
         curr_ymin = max(pcoords.get("ymin"), bymin)
         curr_ymax = min(pcoords.get("ymax"), bymax)
+        if curr_xmin >= curr_xmax or curr_ymin >= curr_ymax:
+            continue
         area = (curr_xmax - curr_xmin) * (curr_ymax - curr_ymin)
         if area > max_area:
             max_area = area
@@ -53,7 +55,7 @@ def possession_list(state, thresh=20):
     counter = 0
     current_player = None
     pos_lst = []
-    for frame in states:
+    for i, frame in enumerate(states):
         if frame.get("ball") is None:
             continue
         poss = curr_possession(frame.get("players"), frame.get("ball"))
@@ -64,11 +66,13 @@ def possession_list(state, thresh=20):
         if poss == current_player:
             counter += 1
         else:
+            if counter >= thresh:
+                pos_lst.append((current_player, i-counter, i))
             current_player = poss
             counter = 0
-
-        if counter >= thresh:
-            pos_lst.append(poss)
+            # Can make this more robust by allowing for a certain number of
+            # frames where the ball is not in the possession of any player
+            # or of a different player
     return pos_lst
 
 # def connections(pos_lst, players):
@@ -108,7 +112,8 @@ def connections(pos_lst, players, player_idx):
     """
     connects = [[0 for _ in range(len(players))] for _ in range(len(players))]
     for i in range(0, len(pos_lst)-1):
-        connects[player_idx.get(pos_lst[i])][player_idx.get(pos_lst[i+1])] += 1
+        connects[player_idx.get(pos_lst[i][0])
+                 ][player_idx.get(pos_lst[i+1][0])] += 1
     return connects
 
 
@@ -142,7 +147,10 @@ def team_split(state):
         state: a StatState class that holds all sorts of information
                 on the video
     Output:
-        state: updated version of the input
+        best_team [tuple]: tuple of two sets of player ids that are the best
+                            team split
+        pos_lst [list[tuple]]: list of player ids in the order of ball
+                                possession with start and finish frames
     '''
     # dict of player stats
     players = state.players.keys()
@@ -150,7 +158,6 @@ def team_split(state):
     pos_lst = possession_list(state, players)
     player_idx = {player: i for i, player in enumerate(players)}
     connects = connections(pos_lst, players, player_idx)
-    state.passes = connects
     teams = possible_teams(players)
     best_team = None
     min_count = 0
@@ -167,6 +174,4 @@ def team_split(state):
         if count < min_count:
             min_count = count
             best_team = team
-    state.team1 = best_team[0]
-    state.team2 = best_team[1]
-    return state
+    return best_team, pos_lst
