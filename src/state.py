@@ -19,7 +19,7 @@ class StatState:
     State class holding: player positions, ball position, and team scores
     """
 
-    def __init__(self, output_path):
+    def __init__(self, output_path, player_init_frame):
         # TODO pass in output path text file and initialise fields
         rim, frames = self.parse_output(output_path)
 
@@ -27,13 +27,17 @@ class StatState:
         self.rim = rim  # xmin, xmax, ymin, ymax
         self.backboard = {}  # coordinates
         self.court_lines = {}  # TBD
-
         # MUTABLE
         # [{'ball': {xmin, xmax, ymin, ymax}, 'playerid'...}]
         self.states = frames
         # {'player1id': {'shots': 0, "points": 0, "rebounds": 0, "assists": 0},
         # player2id: ...}
+        start_stats = {'shots': 0, "points": 0, "rebounds": 0, "assists": 0}
+        init_frame = frames[player_init_frame]
         self.players = {}
+        for id in init_frame.keys():
+            if id != 'ball':
+                self.players[id] = start_stats
         # [(start_frame, end_frame, BallState)]
         self.ball_state = []
         # {'pass_id': {'frames': (start_frame, end_frame)},
