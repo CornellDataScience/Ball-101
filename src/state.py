@@ -21,8 +21,8 @@ class StatState:
 
     def __init__(self, output_path, player_init_frame):
         # TODO pass in output path text file and initialise fields
-        rim, frames = self.parse_output(output_path)
-        team1, team2, passes = team_split(frames[player_init_frame].keys())
+        rim, frames = self.__parse_output(output_path)
+        teams, pos_lst = team_split(frames[player_init_frame].keys())
 
         # IMMUTABLE
         self.rim = rim  # xmin, xmax, ymin, ymax
@@ -44,12 +44,12 @@ class StatState:
         self.ball_state = []
         # {'pass_id': {'frames': (start_frame, end_frame)},
         # 'players':(p1_id, p2_id)}}
-        self.passes = passes
+        self.passes = self.__player_passes(pos_lst)
         # {'player_id': [(start_frame, end_frame), ...]}
         self.possession = {}
         # [player1, player2]
-        self.team1 = team1
-        self.team2 = team2
+        self.team1 = teams[0]
+        self.team2 = teams[1]
         self.score_1 = 0
         self.score_2 = 0
 
@@ -70,7 +70,7 @@ class StatState:
         else:
             self.score_2 += value
 
-    def parse_output(self, output_path):
+    def __parse_output(self, output_path):
         """
         Parses the output file into a list of dictionaries.
         File is in the format:
@@ -121,3 +121,24 @@ class StatState:
                     rim = False
             frames.append(frame_info)
         return rim_info, frames
+
+    def __player_passes(self, pos_lst):
+        """
+        Input:
+            pos_lst [list]: list of ball possession tuples
+        Output:
+            passes [list[tuple]]: Returns a list of passes with each pass
+                                represented as a tuple of the form
+                                (pass_id, passerid, receiverid,
+                                start_frame, end_frame)
+        """
+        passes = []
+        curr_player = pos_lst[0][0]
+        curr_end_frame = pos_lst[0][2]
+        for i in range(1, len(pos_lst)):
+            curr_pass = (i, curr_player, pos_lst[i][0], curr_end_frame+1,
+                         pos_lst[i][1]-1)
+            passes.append(curr_pass)
+            curr_player = pos_lst[i][0]
+            curr_end_frame = pos_lst[i][2]
+        return passes
