@@ -22,11 +22,13 @@ class StatState:
     def __init__(self, output_path, player_init_frame):
         # TODO pass in output path text file and initialise fields
         rim, frames = self.parse_output(output_path)
+        team1, team2, passes = team_split(frames[player_init_frame].keys())
 
         # IMMUTABLE
         self.rim = rim  # xmin, xmax, ymin, ymax
         self.backboard = {}  # coordinates
         self.court_lines = {}  # TBD
+
         # MUTABLE
         # [{'ball': {xmin, xmax, ymin, ymax}, 'playerid'...}]
         self.states = frames
@@ -42,12 +44,12 @@ class StatState:
         self.ball_state = []
         # {'pass_id': {'frames': (start_frame, end_frame)},
         # 'players':(p1_id, p2_id)}}
-        self.passes = {}
-        # {'player_id': [start_frame, end_frame]}
+        self.passes = passes
+        # {'player_id': [(start_frame, end_frame), ...]}
         self.possession = {}
         # [player1, player2]
-        self.team1 = []
-        self.team2 = []
+        self.team1 = team1
+        self.team2 = team2
         self.score_1 = 0
         self.score_2 = 0
 
