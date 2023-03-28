@@ -86,10 +86,10 @@ class StatState:
         """
         frames = []
         rim_info = {}
+        frame_info = {"players": {}}
         with open(output_path, 'r') as f:
             lines = f.readlines()
             curr_frame = lines[0].split()[0]
-            frame_info = {}
             rim = True
             for line in lines:
                 curr = line.split()
@@ -105,7 +105,7 @@ class StatState:
                         'ymax': curr[4] + curr[6]
                     }
                 elif curr[1] == '1':
-                    frame_info['player' + curr[2]] = {
+                    frame_info['players']['player' + curr[2]] = {
                         'xmin': curr[3],
                         'ymin': curr[4],
                         'xmax': curr[3] + curr[5],
