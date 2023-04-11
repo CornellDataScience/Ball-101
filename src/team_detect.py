@@ -4,6 +4,7 @@ This module contains functions that will find the best team split. It will
 also create a list of players in the order of ball possession.
 """
 
+
 def curr_possession(players, ball):
     '''
     Input:
@@ -31,6 +32,7 @@ def curr_possession(players, ball):
             max_area = area
             max_player = player
     return max_player
+
 
 def possession_list(state, thresh=20):
     '''
@@ -69,6 +71,7 @@ def possession_list(state, thresh=20):
             pos_lst.append(poss)
     return pos_lst
 
+
 def connections(pos_lst, players):
     """
     Input:
@@ -92,6 +95,7 @@ def connections(pos_lst, players):
         connects[name] += 1
     return connects
 
+
 def possible_teams(players):
     """
     Input:
@@ -102,6 +106,7 @@ def possible_teams(players):
     num_people = len(players)
     ppl_per_team = num_people/2
     acc = []
+
     def permutation(i, t):
         if i >= num_people:
             return
@@ -113,6 +118,7 @@ def possible_teams(players):
             permutation(i+1, t.copy())
     permutation(0, set())
     return acc
+
 
 def team_split(state):
     '''
