@@ -41,7 +41,8 @@ class StatState:
             if id != 'ball':
                 self.players[id] = start_stats
         # [(start_frame, end_frame, BallState)]
-        self.ball_state = []
+        self.ball_state = self.__ball_state_update(
+            pos_lst, lastframe=len(frames)-1)
         # {'pass_id': {'frames': (start_frame, end_frame)},
         # 'players':(p1_id, p2_id)}}
         self.passes = self.__player_passes(pos_lst)
@@ -142,3 +143,20 @@ class StatState:
             curr_player = pos_lst[i][0]
             curr_end_frame = pos_lst[i][2]
         return passes
+
+    def __ball_state_update(pos_lst, lastframe):
+        # [(start_frame, end_frame, BallState)]
+        ball_state = []
+        if pos_lst[0][1] != 0:
+            ball_state.append((0, pos_lst[0][1]-1, BallState.OUT_OF_PLAY))
+        ball_state.append(
+            (pos_lst[0][1], pos_lst[0][2], BallState.IN_POSSESSION))
+        curr_frame = pos_lst[0][2]+1
+        for i in range(1, len(pos_lst)):
+            ball_state.append(
+                (curr_frame, pos_lst[i][1]-1, BallState.IN_TRANSITION))
+            ball_state.append(
+                (pos_lst[i][1], pos_lst[i][2], BallState.IN_POSSESSION))
+            curr_frame = pos_lst[i][2]+1
+        ball_state.append((curr_frame, lastframe, BallState.OUT_OF_PLAY))
+        return ball_state
