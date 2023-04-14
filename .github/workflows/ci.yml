@@ -23,7 +23,7 @@ jobs:
     - name: Putting data
       env:
         DATA: ${{ secrets.GOOGLE_SERVICES_JSON }}
-      run: echo $DATA > /home/runner/work/Ball-101/Ball-101/api/credentials.json
+      run: echo $DATA >> /home/runner/work/Ball-101/Ball-101/api/credentials.json
     - name: Run CI tests
       run: |
         python src/main.py --ci ${{github.workspace}}/model/temp/user.mp4
