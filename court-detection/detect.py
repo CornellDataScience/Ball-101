@@ -1,9 +1,8 @@
 import os
 import cv2 as cv
 import numpy as np
-    
-PATH = os.path.join('models','court-detection')
-TEMP_PATH = os.path.join(PATH,'temp')
+
+TEMP_PATH = os.path.join('court-detection','temp')
 VIDEO_PATH = os.path.join(TEMP_PATH,'demo.mov')
 COURT_PATH = os.path.join(TEMP_PATH,'court.jpeg')
 TEMPLATE_PATH = os.path.join(TEMP_PATH,'template.jpeg')
@@ -12,6 +11,9 @@ TRUE_PATH = os.path.join(TEMP_PATH,'true_map.png')
 
 HSV_BINNING = True
 COLOR_SMOOTHING = 5
+
+HALF_COURT_BOUNDARY = np.array([(2043,1920),(2043,35),(37,35),(37,1920)])
+BOX_BOUNDARY = np.array([(1277,798),(1277,35),(803,35),(803,798)])
 
 _, bgr_img = cv.VideoCapture(VIDEO_PATH).read()
 ycrcb_img = cv.cvtColor(bgr_img,cv.COLOR_BGR2YCrCb)
@@ -42,14 +44,26 @@ def main():
     mask = get_mask(img, bins[0])
     canny_edges = get_canny(gray_img)
     masked_edges = apply_mask(canny_edges, mask)
-    hough_lines = get_hough(masked_edges)
+    hough_lines = get_hough(masked_edges,threshold=150)
     hough = apply_hough(bgr_img, hough_lines)
 
     masked_edges = thicken_edges(masked_edges,iterations=2)
     gray_truth = invert_grayscale(true_map)
     matched = match_keypoints(masked_edges,gray_truth)
 
-    warped_img = apply_homography(bgr_img,[(3500,640),(710,460),(-270,680),(9000,3300)])
+    pts = pair_lines(masked_edges,hough_lines)
+    test_bgr = bgr_img.copy()
+    print(pts)
+    colors = [(0,0,255),(0,255,0),(255,0,0), (255,255,0)]
+    for i in range(0,4):
+        pt = pts[i]
+        cv.circle(test_bgr,(int(pt[0]),int(pt[1])), 5, colors[i], -1)
+    new_img = apply_bgr_homography(bgr_img,pts)
+    new_gray_img = apply_gray_homography(masked_edges,pts,or_mask=True)
+    cv.imshow('new test', new_img)
+    cv.imshow('new gray test', new_gray_img)
+    cv.imshow('points image', test_bgr)
+
 
     # contours = get_hull(mask)
     # res2 = apply_hull(bgr_image,contours)
@@ -65,13 +79,13 @@ def main():
     # test_many_hough(bgr_img, masked_edges, [[0.5,1,2,4],[np.pi/180],[200]])
 
 
-    cv.imshow('original', bgr_img)
-    cv.imshow('mask', mask)
-    cv.imshow('canny', canny_edges)
-    cv.imshow('canny masked', masked_edges)
+    # cv.imshow('original', bgr_img)
+    # cv.imshow('mask', mask)
+    # cv.imshow('canny', canny_edges)
+    # cv.imshow('canny masked', masked_edges)
     cv.imshow('hough transform', hough)
-    cv.imshow('matched image', matched)
-    cv.imshow('warped image', warped_img)
+    # cv.imshow('matched image', matched)
+    # cv.imshow('warped image', warped_img)
 
     if cv.waitKey(0) & 0xff == 27:
         cv.destroyAllWindows()
@@ -162,8 +176,40 @@ def thicken_edges(img:np.ndarray, iterations:int=2):
 
 # Returns list of lines to draw through hough transform
 # Preconditino: Should be 8-bit grayscale image
-def get_hough(img:np.ndarray,rho:float=1,theta:float=np.pi/180,threshold:int=150):
+def get_hough(img:np.ndarray,rho:float=1,theta:float=np.pi/180,threshold:int=200):
     return cv.HoughLines(img, rho, theta, threshold)
+
+# returns list of lines in form hor[i1],hor[i2],ver[j1],ver[j2]
+def pair_lines(img:np.ndarray,lines:list):
+    ret = []
+
+
+    hor = lines[lines[:,0,1]<=np.pi/2] # baseline
+    ver = lines[lines[:,0,1]>np.pi/2] # sideline
+    hor = np.array(sorted(hor, key = lambda x : x[0][0]))
+    ver = np.array(sorted(ver, key = lambda x : x[0][0]))
+
+    i1 = 0
+    max_goodness = 0
+    max_homo = None
+    for i2 in range(i1+1,len(hor)):
+        if hor[i2][0][0]-hor[i1][0][0] < 500: #within 100 pixels stop
+            continue
+        for j1 in range(len(ver)):
+            for j2 in range(j1+1,len(ver)):
+                if ver[j2][0][0]-ver[j1][0][0] < 50 or ver[j2][0][0]-ver[j1][0][0] > 400:
+                    continue
+                pts = get_homography(hor[i1][0],hor[i2][0],ver[j1][0],ver[j2][0])
+                out = apply_gray_homography(img,pts)
+                goodness = np.count_nonzero(out > 100)
+                if (goodness > max_goodness):
+                    max_goodness = goodness
+                    max_homo = pts
+    return max_homo
+
+def evaluate_homography(pts):
+    return None
+
 
 def apply_hough(img:np.ndarray, lines:list):
     out = img.copy()
@@ -174,8 +220,28 @@ def apply_hough(img:np.ndarray, lines:list):
         x1, y1 = int(x0 + 2000*(-b)), int(y0 + 2000*(a))
         x2, y2 = int(x0 - 2000*(-b)), int(y0 - 2000*(a)) 
         cv.line(out,(x1,y1),(x2,y2),[0,0,255])
-
     return out
+
+def get_homography(hor1,hor2,ver1,ver2):
+    p1 = get_line_intersection(hor2,ver1)
+    p2 = get_line_intersection(hor1,ver1)
+    p3 = get_line_intersection(hor1,ver2)
+    p4 = get_line_intersection(hor2,ver2)
+    return (p1,p2,p3,p4)
+
+def get_line_intersection(line1,line2):
+    rho1, theta1 = line1
+    rho2, theta2 = line2
+    a1 = np.cos(theta1)
+    a2 = np.sin(theta1)
+    b1 = np.cos(theta2)
+    b2 = np.sin(theta2)
+    d = a1*b2 - a2*b1
+    if d==0:
+        return (0,0)
+    x = (rho1*b2-rho2*a2) / d
+    y = (-rho1*b1+rho2*a1) / d
+    return (x,y)
 
 def match_keypoints(gray_source:np.ndarray, gray_truth:np.ndarray):
     # detect keypoints with ORB
@@ -203,13 +269,24 @@ def apply_hull(img:np.ndarray, contours:tuple):
 
 # return warped image given list of four pts. 
 # src_pts: (start at half court, wrap around counterclockwise)
-def apply_homography(im_src:np.ndarray, pts_src):
+def apply_gray_homography(im_src:np.ndarray, pts_src, or_mask=False):
     im_dst = true_map.copy()
-    pts_dst = np.array([(2043,1923),(2043,35),(37,35),(37,1923)])
+    pts_dst = BOX_BOUNDARY
     pts_src = np.array(pts_src)
     h, _ = cv.findHomography(pts_src,pts_dst)
     im_out = cv.warpPerspective(im_src, h, (im_dst.shape[1],im_dst.shape[0]))
-    print(im_out.shape,im_dst.shape)
+    if or_mask:
+            im_out = cv.bitwise_or(im_out,invert_grayscale(im_dst))
+    else:
+        im_out = cv.bitwise_and(im_out,invert_grayscale(im_dst))
+    return im_out
+
+def apply_bgr_homography(im_src:np.ndarray, pts_src):
+    im_dst = true_map.copy()
+    pts_dst = BOX_BOUNDARY
+    pts_src = np.array(pts_src)
+    h, _ = cv.findHomography(pts_src,pts_dst)
+    im_out = cv.warpPerspective(im_src, h, (im_dst.shape[1],im_dst.shape[0]))
     im_out = cv.bitwise_or(im_out,cv.cvtColor(invert_grayscale(im_dst),cv.COLOR_GRAY2BGR))
     return im_out
 
