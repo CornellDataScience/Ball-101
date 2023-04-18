@@ -130,3 +130,5 @@ dmypy.json
 
 # GCS
 api/credentials.json
+
+.DS_Store

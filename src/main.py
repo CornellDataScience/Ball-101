@@ -7,7 +7,7 @@ import argparse
 import yaml
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from api import gcs
-from src import modelrunner
+from src.modelrunner import ModelRunner
 from src.statrunner import StatRunner
 
 
@@ -22,7 +22,7 @@ def load_config(path):
 
 def pull_user_video(file_name):
     """
-    Pulls video from GCS bucket.
+    Pulls video from GCS bucket. Returns the path of the downloaded video.
     """
     config = load_config('src/config.yaml')
     vars_ = config['vars_']
@@ -39,12 +39,13 @@ def main(file_name, file_path=None):
     """
     config = load_config('src/config.yaml')
     model_vars = config['model_vars']
-    if file_path is None:
-        download_path = pull_user_video(file_name)
-        processed_path = modelrunner.run_models(download_path, model_vars)
-    else:
-        processed_path = modelrunner.run_models(file_path, model_vars)
-    statrunner = StatRunner(processed_path)
+    stat_vars = config['stat_vars']
+    video_path = pull_user_video(file_name) if (file_path is None) else file_path
+    modelrunner = ModelRunner(video_path, model_vars)
+    modelrunner.run()
+    processed_path = modelrunner.get_processed_video()
+    text_output_paths = modelrunner.get_text_outputs()
+    statrunner = StatRunner(processed_path, text_output_paths, stat_vars)
     statrunner.run()
     print(f'Model run complete. The output can be found at: {processed_path}')
     return processed_path

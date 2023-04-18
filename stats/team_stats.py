@@ -17,6 +17,6 @@ class TeamStatsProcessor:
     def compute_team_score(self):
         pass
 
-    
+
     def compute_assists(self):
         pass
