@@ -44,8 +44,8 @@ def main(file_name, file_path=None):
     modelrunner = ModelRunner(video_path, model_vars)
     modelrunner.run()
     processed_path = modelrunner.get_processed_video()
-    text_output_path = modelrunner.get_text_output()
-    statrunner = StatRunner(processed_path, text_output_path, stat_vars)
+    text_output_paths = modelrunner.get_text_outputs()
+    statrunner = StatRunner(processed_path, text_output_paths, stat_vars)
     statrunner.run()
     print(f'Model run complete. The output can be found at: {processed_path}')
     return processed_path

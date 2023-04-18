@@ -70,6 +70,7 @@ class ModelRunner:
         """Fetches the location of the processed video."""
         return os.path.join(self.export_directory, self.export_folder_name, self.reencoded_filename)
 
-    def get_text_output(self):
-        """TODO Returns the location of the model text output."""
-        return None
+
+    def get_text_outputs(self):
+        """TODO Returns the location of the player file and ball file outputs."""
+        return 'src/test2.txt', 'src/ball.txt'

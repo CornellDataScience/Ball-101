@@ -20,7 +20,6 @@ class StatState:
     """
 
     def __init__(self, output_path, player_init_frame, ballFile):
-        # TODO pass in output path text file and initialise fields
         rim, frames = self.__parse_output(output_path)
         # IMMUTABLE
         self.rim = rim  # xmin, xmax, ymin, ymax
