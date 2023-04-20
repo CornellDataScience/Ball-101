@@ -1,9 +1,11 @@
 import os
 import cv2 as cv
 import numpy as np
+import random
 
 
 class Bin:
+    'Bin to store color ranges of two channels'
     def __init__(self, value, one_lower:int, one_upper:int, two_lower:int, two_upper:int):
         self.one_lower = one_lower
         self.one_upper = one_upper
@@ -14,8 +16,16 @@ class Bin:
     def __str__(self):
         return 'Bin('+str(round(self.value,3))+','+str(self.one_lower)+','+str(self.one_upper)+','+str(self.two_lower)+','+str(self.two_upper)+')'
 
+class Frame:
+    def __init__(self,frame_id:int,player_dict:dict):
+        self.id = frame_id
+        self.dict = player_dict
+
+    def __str__(self):
+        return 'Frame '+str(self.id)+' with players '+str(self.dict.keys())
+
 class Render:
-    def __init__(self, video_path:str,):
+    def __init__(self, video_path:str, pos:list, display_images:bool=False):
         'Initializes all paths to images and truth values and runs court detection'
         self.TRUE_PATH = os.path.join('court-detection','temp','true_map.png')
         self.VIDEO_PATH = video_path
@@ -27,6 +37,7 @@ class Render:
         self.ycrcb_img = cv.cvtColor(self.bgr_img,cv.COLOR_BGR2YCrCb)
         self.hsv_img = cv.cvtColor(self.bgr_img, cv.COLOR_BGR2HSV)
         self.gray_img = cv.cvtColor(self.bgr_img, cv.COLOR_BGR2GRAY)
+        self.masked_edges = self.gray_img.copy()
         self.true_map = cv.imread(self.TRUE_PATH,cv.IMREAD_GRAYSCALE)
 
         self.HSV_BINNING = True # choose either HSV binning or YCrCb binning
@@ -41,7 +52,7 @@ class Render:
             self.two_max = 256.0
             self.img = self.ycrcb_img
 
-        self.DISPLAY_IMAGES = True
+        self.DISPLAY_IMAGES = display_images
         if self.DISPLAY_IMAGES == True:
             self.detect_courtlines_and_display()
         else:
@@ -53,10 +64,11 @@ class Render:
         mask = self.get_mask(self.img, bins[0])
         canny_edges = self.get_canny(self.gray_img)
         masked_edges = self.apply_mask(canny_edges, mask)
-        hough_lines = self.get_hough(masked_edges,threshold=150)
-        thick_masked_edges = self.thicken_edges(masked_edges,iterations=2)
-        best_pts = self.find_best_homography(thick_masked_edges,hough_lines)
-        self.homography = cv.findHomography(best_pts,self.HALF_COURT_BOUNDARY)
+        hough_lines = self.get_hough(masked_edges,threshold=180)
+        thick_masked_edges = self.thicken_edges(masked_edges,iterations=1)
+        self.masked_edges = thick_masked_edges.copy()
+        best_pts = self.find_best_homography(hough_lines)
+        self.homography = cv.findHomography(best_pts,self.BOX_BOUNDARY)
 
     def detect_courtlines_and_display(self):
         'Finds best homography and displays images of progress'
@@ -64,26 +76,44 @@ class Render:
         mask = self.get_mask(self.img, bins[0])
         canny_edges = self.get_canny(self.gray_img)
         masked_edges = self.apply_mask(canny_edges, mask)
-        hough_lines = self.get_hough(masked_edges,threshold=100)
+        
+
+        hough_lines = self.get_hough(masked_edges,threshold=180)
         hough = self.apply_hough(self.bgr_img, hough_lines)
-        thick_masked_edges = self.thicken_edges(masked_edges,iterations=2)
-        best_pts = self.find_best_homography(thick_masked_edges,hough_lines)
+        thick_masked_edges = self.thicken_edges(masked_edges,iterations=1)
+        self.masked_edges = thick_masked_edges.copy()
+        best_pts = self.find_best_homography(hough_lines)
+        
+        while self.regress_box_boundary(best_pts):
+            print('new goodness',self.evaluate_homography(best_pts,self.BOX_BOUNDARY))
+        print('to fine tuning')
+        while self.fine_regress_box_boundary(best_pts):
+            print('new goodness',self.evaluate_homography(best_pts,self.BOX_BOUNDARY))
+
+
         test_bgr = self.bgr_img.copy()
+        color_map = cv.cvtColor(self.true_map,cv.COLOR_GRAY2BGR)
         colors = [(0,0,255),(0,255,0),(255,0,0), (255,255,0)]
         for i in range(0,4):
             pt = best_pts[i]
             cv.circle(test_bgr,(int(pt[0]),int(pt[1])), 5, colors[i], -1)
+            pt = self.BOX_BOUNDARY[i]
+            cv.circle(color_map,(int(pt[0]),int(pt[1])), 10, colors[i], -1)
         new_img = self.apply_bgr_homography(self.bgr_img,best_pts)
-        new_gray_img = self.apply_gray_homography(masked_edges,best_pts,or_mask=True)
+        new_gray_img = self.apply_gray_homography(self.masked_edges,best_pts,or_mask=True)
+        second_gray_img = self.apply_gray_homography(self.masked_edges,best_pts,or_mask=False)
+
         
-        cv.imshow('original', self.bgr_img)
-        cv.imshow('mask', mask)
-        cv.imshow('canny', canny_edges)
-        cv.imshow('canny masked', masked_edges)
+        # cv.imshow('original', self.bgr_img)
+        # cv.imshow('mask', mask)
+        # cv.imshow('canny', canny_edges)
+        # cv.imshow('canny masked', masked_edges)
         cv.imshow('hough transform', hough)
         cv.imshow('new test', new_img)
-        cv.imshow('new gray test', new_gray_img)
+        cv.imshow('gray union', new_gray_img)
+        cv.imshow('gray intersection', second_gray_img)
         cv.imshow('points image', test_bgr)
+        cv.imshow('true map',color_map)
 
         if cv.waitKey(0) & 0xff == 27:
             cv.destroyAllWindows()
@@ -171,14 +201,14 @@ class Render:
 
 
 
-    def get_hough(self,img:np.ndarray,rho:float=1,theta:float=np.pi/90,threshold:int=200):
+    def get_hough(self,img:np.ndarray,rho:float=1,theta:float=np.pi/180,threshold:int=200):
         '''
         Returns list of lines to draw through hough transform
         @Precondition: Should be 8-bit grayscale image
         '''
         return cv.HoughLines(img, rho, theta, threshold)
 
-    def find_best_homography(self,img:np.ndarray,lines:list):
+    def find_best_homography(self,lines:list):
         '''
         Return four points of inner box with best homography intersection
         @Precondition: lines is list of lines from Hough Transform and img is BGR image of court'''
@@ -191,35 +221,99 @@ class Render:
         print('size before,',len(hor),len(ver))
 
         # remove similar lines 
-        RHO_THRESHOLD = 5
+        RHO_THRESHOLD = 10
         THETA_THRESHOLD = 2.001 * (np.pi/180)
-        hor = self.filter_similar_lines(hor,rho_threshold=RHO_THRESHOLD,theta_threshold=THETA_THRESHOLD)
-        ver = self.filter_similar_lines(ver,rho_threshold=RHO_THRESHOLD,theta_threshold=THETA_THRESHOLD)
+        # hor = self.filter_similar_lines(hor,rho_threshold=RHO_THRESHOLD,theta_threshold=THETA_THRESHOLD)
+        # ver = self.filter_similar_lines(ver,rho_threshold=RHO_THRESHOLD,theta_threshold=THETA_THRESHOLD)
 
         print('size after,',len(hor),len(ver))
-
-
+        # print (np.array(ver),np.array(hor))
 
         max_goodness = 0
         max_homography = None
         for i1 in range(0,len(hor)):
             for i2 in range(i1+1,len(hor)):
-                if hor[i2][0][0]-hor[i1][0][0] < 600: #within 100 pixels stop
-                    continue
+                # if hor[i2][0][0]-hor[i1][0][0] < 600: #within 100 pixels stop
+                #     continue
                 for j1 in range(len(ver)):
                     for j2 in range(j1+1,len(ver)):
-                        if ver[j2][0][0]-ver[j1][0][0] < 100 or ver[j2][0][0]-ver[j1][0][0] > 300:
+                        # if ver[j2][0][0]-ver[j1][0][0] > 200:
+                        #     continue
+                        pts = self.get_four_intersections(hor[i1][0],hor[i2][0],ver[j1][0],ver[j2][0])
+                        if pts is None:
                             continue
-                        pts = self.get_four_intersection(hor[i1][0],hor[i2][0],ver[j1][0],ver[j2][0])
-                        out = self.apply_gray_homography(img,pts)
-                        goodness = np.count_nonzero(out > 100)
+                        goodness = self.evaluate_homography(pts,self.BOX_BOUNDARY)
                         if (goodness > max_goodness):
                             max_goodness = goodness
                             max_homography = pts
-        print('max goodness: ',float(max_goodness)/np.count_nonzero(self.invert_grayscale(self.true_map)))
+                            if max_goodness > 0.8:
+                                print('max goodness: ',max_goodness)
+                                return max_homography
+        print('max goodness: ',max_goodness)
         return max_homography
     
+    def regress_box_boundary(self,pts_src,delta=range(1,40)):
+        prev_good = self.evaluate_homography(pts_src,self.BOX_BOUNDARY)
+        box_bounds = []
+        for i in [0]:
+            for j in [-1,1]:
+                for d in delta:
+                    # copy = self.BOX_BOUNDARY.copy()
+                    # copy[i:i+2,0] += delta*j
+                    # box_bounds.append(copy)
+                    copy = self.BOX_BOUNDARY.copy()
+                    copy[[i-1,i],1] += d*j
+                    box_bounds.append(copy)
+
+        max_good = 0
+        max_index = 0
+        for i in range(len(box_bounds)):
+            good = self.evaluate_homography(pts_src,box_bounds[i])
+            if good > max_good:
+                max_good = good
+                max_index = i
+        
+        if max_good <= prev_good:
+            return False
+        else:
+            self.BOX_BOUNDARY = box_bounds[max_index]
+            return True
+    
+    def fine_regress_box_boundary(self,pts_src,delta=range(1,5)):
+        prev_good = self.evaluate_homography(pts_src,self.BOX_BOUNDARY)
+        box_bounds = []
+        for i in [0,1,2,3]:
+            for j in [0,1]:
+                for k in [-1,1]:
+                    for d in delta:
+                        copy = self.BOX_BOUNDARY.copy()
+                        copy[i,j] += d*k
+                        box_bounds.append(copy)
+
+        max_good = 0
+        max_index = 0
+        for i in range(len(box_bounds)):
+            good = self.evaluate_homography(pts_src,box_bounds[i])
+            if good > max_good:
+                max_good = good
+                max_index = i
+        
+        if max_good <= prev_good:
+            return False
+        else:
+            self.BOX_BOUNDARY = box_bounds[max_index]
+            return True
+    
+    def evaluate_homography(self,pts_src,pts_dst):
+        mapped_edge_img = self.apply_gray_homography(self.masked_edges,pts_src,pts_dst=pts_dst)
+        total = 171053
+        # total = np.count_nonzero(self.invert_grayscale(self.true_map)
+        goodness = float(np.count_nonzero(mapped_edge_img > 100)) / total
+        return goodness
+
+
     def filter_similar_lines(self,lines,rho_threshold=2,theta_threshold=1.001*(np.pi/180)):
+        'Removes lines with similar rho and theta values.'
         if len(lines) == 0: 
             return lines
         ret = [lines[0]]
@@ -236,24 +330,23 @@ class Render:
                 ret.append(line)
         return ret
                     
-    
-    def apply_hough(self,img:np.ndarray, lines:list):
-        'Return image with hough transform lines drawn on top'
-        out = img.copy()
-        for line in lines:
-            rho, theta = line[0]
-            a, b = np.cos(theta), np.sin(theta)
-            x0, y0 = a*rho, b*rho
-            x1, y1 = int(x0 + 2000*(-b)), int(y0 + 2000*(a))
-            x2, y2 = int(x0 - 2000*(-b)), int(y0 - 2000*(a)) 
-            cv.line(out,(x1,y1),(x2,y2),[0,0,255])
-        return out
-    
+ 
     def get_four_intersections(self,hor1,hor2,ver1,ver2):
+        '''
+        return intersection of four lines
+        OR returns None is intersection of four lines it too close to each other
+        '''
         p1 = self.get_line_intersection(hor2,ver1)
         p2 = self.get_line_intersection(hor1,ver1)
         p3 = self.get_line_intersection(hor1,ver2)
         p4 = self.get_line_intersection(hor2,ver2)
+        d1 = self.distance(p1,p2)
+        d2 = self.distance(p2,p3)
+        d3 = self.distance(p3,p4)
+        d4 = self.distance(p4,p1)
+        if (d1<600 or d1>800 or d3<600 or d3>800 or d2<50 or 
+            d2>300 or d4<50 or d4>300 or self.is_not_convex(p1,p2,p3,p4)):
+            return None
         return (p1,p2,p3,p4)
 
     def get_line_intersection(self,line1,line2):
@@ -270,9 +363,44 @@ class Render:
         x = (rho1*b2-rho2*a2) / d
         y = (-rho1*b1+rho2*a1) / d
         return (x,y)
-
     
-    def apply_gray_homography(self,im_src:np.ndarray, pts_src:list, or_mask=False):
+    def distance(self,pt1,pt2):
+        return ((pt1[0]-pt2[0])**2 + (pt1[1]-pt2[1])**2)**0.5
+    
+    def is_not_convex(self,*pts):
+        N = len(pts)
+        prev, curr = 0, 0
+        for i in range(N):
+            temp = [pts[i],pts[(i+1)%N],pts[(i+2)%N]]
+            curr = self.cross_product(temp)
+            if curr != 0:
+                if curr * prev < 0:
+                    return True
+                else:
+                    prev = curr
+        return False
+    
+    def cross_product(self,A):
+        X1 = (A[1][0] - A[0][0])
+        Y1 = (A[1][1] - A[0][1])
+        X2 = (A[2][0] - A[0][0])
+        Y2 = (A[2][1] - A[0][1])
+        return (X1 * Y2 - Y1 * X2)
+
+
+    def apply_hough(self,img:np.ndarray, lines:list):
+        'Return image with hough transform lines drawn on top'
+        out = img.copy()
+        for line in lines:
+            rho, theta = line[0]
+            a, b = np.cos(theta), np.sin(theta)
+            x0, y0 = a*rho, b*rho
+            x1, y1 = int(x0 + 2000*(-b)), int(y0 + 2000*(a))
+            x2, y2 = int(x0 - 2000*(-b)), int(y0 - 2000*(a)) 
+            cv.line(out,(x1,y1),(x2,y2),[0,0,255])
+        return out
+    
+    def apply_gray_homography(self,im_src:np.ndarray, pts_src:list, pts_dst=None, or_mask=False):
         '''
         Return warped image given list of four pts 
         @Preconditions: im_src is grayscale image of masked edges
@@ -280,7 +408,8 @@ class Render:
         or_mask: lets us see all parts of both truth map and homographied image 
         '''
         im_dst = self.true_map.copy()
-        pts_dst = self.BOX_BOUNDARY
+        if pts_dst is None:
+            pts_dst = self.BOX_BOUNDARY
         pts_src = np.array(pts_src)
         h, _ = cv.findHomography(pts_src,pts_dst)
         im_out = cv.warpPerspective(im_src, h, (im_dst.shape[1],im_dst.shape[0]))
@@ -398,4 +527,15 @@ class Render:
 
 if __name__ == '__main__':
     video_path = os.path.join('court-detection','temp','demo.mov')
-    render = Render(video_path=video_path)
+    render = Render(video_path=video_path,pos=None,display_images=True)
+
+    p1 = {'x' : 10,'y' : 20}
+    p2 = {'x' : 15,'y' : 40}
+    p3 = {'x' : 20,'y' : 65}
+    d1 = {'one' : p1,'two' : p3}
+    d2 = {'one' : p2,'two' : p1}
+    d3 = {'one' : p3,'two' : p1}
+    f1 = Frame(1,d1)
+    f2 = Frame(30,d2)
+    f3 = Frame(60,d3)
+    pos = [f1,f2,f3]
