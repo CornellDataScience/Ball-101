@@ -25,7 +25,7 @@ class Frame:
         return 'Frame '+str(self.id)+' with players '+str(self.dict.keys())
 
 class Render:
-    def __init__(self, video_path:str, pos:list, display_images:bool=False):
+    def __init__(self, video_path:str, display_images:bool=False):
         'Initializes all paths to images and truth values and runs court detection'
         self.TRUE_PATH = os.path.join('court-detection','temp','true_map.png')
         self.VIDEO_PATH = video_path
@@ -58,6 +58,49 @@ class Render:
         else:
             self.detect_courtlines()
 
+    def render_video(self,states:dict[int,dict[str,dict]],players:list[str],filename:str):
+        # Create a blank image to use as the background for each frame
+        background = cv.cvtColor(self.true_map,cv.COLOR_GRAY2BGR)
+        height, width, _ = background.shape
+        
+        # Initialize the video writer
+        fourcc = cv.VideoWriter_fourcc(*'mp4v')
+        video_writer = cv.VideoWriter(filename, fourcc, 30, (width,height))
+
+        # Define initial positions for each player
+        player_state = {}
+        for player in players:
+            player_state.update({player:{'pos':(0,0),
+                                        'color':(random.randint(0,256),random.randint(0,256),random.randint(0,256))}})
+        
+        # find duration of video
+        dur = max(states.keys())
+
+        # Loop through each time step
+        for t in range(1,dur+30):
+            # Create a copy of the background image to draw the points on
+            frame = background.copy()
+
+            # Get dictionary of positions at each frame 
+            if int(t) in states:
+                state = states[t]
+                for player in players:
+                    if player in state:
+                        pd = state[player]
+                        x, y = self.transform_point(pd['x'],pd['y'])
+                        player_state[player].update({'pos':(int(x), int(y))})
+            
+            # Loop through each point and draw it on the frame
+            for player in players:
+                cv.circle(frame, player_state[player]['pos'], 20, player_state[player]['color'], -1)
+            
+            # Write the frame to the video writer
+            video_writer.write(frame)
+
+        
+        # Release the video writer
+        video_writer.release()
+
     def detect_courtlines(self):
         'Finds best homography and store it as self.homography'
         bins = self.bin_pixels(self.img, one_bins=18, two_bins=10)
@@ -68,7 +111,12 @@ class Render:
         thick_masked_edges = self.thicken_edges(masked_edges,iterations=1)
         self.masked_edges = thick_masked_edges.copy()
         best_pts = self.find_best_homography(hough_lines)
-        self.homography = cv.findHomography(best_pts,self.BOX_BOUNDARY)
+        # while self.regress_box_boundary(best_pts):
+        #     print('new goodness',self.evaluate_homography(best_pts,self.BOX_BOUNDARY))
+        # print('to fine tuning')
+        # while self.fine_regress_box_boundary(best_pts):
+        #     print('new goodness',self.evaluate_homography(best_pts,self.BOX_BOUNDARY))
+        self.homography, _ = cv.findHomography(np.array(best_pts),self.BOX_BOUNDARY)
 
     def detect_courtlines_and_display(self):
         'Finds best homography and displays images of progress'
@@ -172,7 +220,6 @@ class Render:
         upperbound[self.index[0]] = bin.one_upper + self.COLOR_SMOOTHING*0
         upperbound[self.index[1]] = bin.two_upper + self.COLOR_SMOOTHING*0
         mask = cv.inRange(img, lowerbound, upperbound)
-        cv.imshow('original mask',mask)
 
         # close and open mask
         kernel = np.ones((3,3),np.uint8)
@@ -400,6 +447,20 @@ class Render:
             cv.line(out,(x1,y1),(x2,y2),[0,0,255])
         return out
     
+    def transform_point(self,x,y):
+        point = np.array([[x, y]], dtype=np.float32)
+
+        # Reshape the point into a 1x1x2 array (required by cv2.perspectiveTransform())
+        point = point.reshape((1, 1, 2))
+
+        # Apply the homography to the point
+        transformed_point = cv.perspectiveTransform(point, self.homography)
+
+        # Extract the transformed coordinates as a tuple (tx, ty)
+        tx, ty = transformed_point[0, 0]
+
+        return tx, ty
+
     def apply_gray_homography(self,im_src:np.ndarray, pts_src:list, pts_dst=None, or_mask=False):
         '''
         Return warped image given list of four pts 
@@ -527,15 +588,20 @@ class Render:
 
 if __name__ == '__main__':
     video_path = os.path.join('court-detection','temp','demo.mov')
-    render = Render(video_path=video_path,pos=None,display_images=True)
+    render = Render(video_path=video_path,display_images=False)
 
-    p1 = {'x' : 10,'y' : 20}
-    p2 = {'x' : 15,'y' : 40}
-    p3 = {'x' : 20,'y' : 65}
+    p1 = {'x' : 100,'y' : 200}
+    p2 = {'x' : 150,'y' : 400}
+    p3 = {'x' : 200,'y' : 650}
     d1 = {'one' : p1,'two' : p3}
     d2 = {'one' : p2,'two' : p1}
     d3 = {'one' : p3,'two' : p1}
-    f1 = Frame(1,d1)
-    f2 = Frame(30,d2)
-    f3 = Frame(60,d3)
-    pos = [f1,f2,f3]
+    states = {
+        1 : d1,
+        30 : d2,
+        60 : d3
+    }
+    players = ['one','two']
+
+    filename = os.path.join('court-detection','temp','point.mp4')
+    render.render_video(states,players,filename)
