@@ -1,16 +1,18 @@
 """
 Frontend
 """
+import io
+import sys
+import os
 import streamlit as st
 import hydralit_components as hc
 import pandas as pd
 import requests
-import io
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from src import main
 
 # Set up tab title and favicon
-st.set_page_config(page_title='Hoop Track', page_icon=':basketball:')
-
-
+st.set_page_config(page_title='HoopTracker', page_icon=':basketball:')
 
 # Initialize Session State
 # 0 : Default State : No Video Uploaded --> Prompts For Upload / Home Screen Demo
@@ -22,29 +24,40 @@ if 'state' not in st.session_state:
     st.session_state.video_file = io.BytesIO(open('view/media/demo_basketball.mov', 'rb').read())
     st.session_state.results = pd.read_csv('view/media/demo_results.csv')
     st.session_state.is_downloaded = False
+    st.session_state.upload_name = None
+
 
 # Backend Connection -----------------------------------------
 SERVER_URL = "http://127.0.0.1:8000/"
 # Send request to Google Compute Machine
 def process_video(video_file):
-    requests.post(SERVER_URL+"upload", files={"video_file": video_file})
+    response = requests.post(SERVER_URL+"upload", 
+                             files={"video_file": video_file}, timeout=30)
+    if response.status_code == 200:
+        data = response.json()
+        st.session_state.upload_name = data.get('message')
+    else:
+        print('error uploading file') # maybe make an error handler in frontend
     st.session_state.is_downloaded = False
     return video_file is not None
 
 
 def fetch_csv():
-    if (not st.session_state.is_downloaded):
-        out = requests.get(SERVER_URL+"results")
+    if not st.session_state.is_downloaded:
+        out = requests.get(SERVER_URL+"results", timeout=30)
         st.session_state.results = pd.read_csv(io.StringIO(out.content.decode()))
     st.session_state.is_downloaded = True
     return st.session_state.results.to_csv()
-    
+
+def fetch_processed_video():
+    return main.main(st.session_state.upload_name)
+
 # ------------------------------------------------------------
 
 # Main Page
 def main_page():
     st.markdown('''
-        # HoopTrack
+        # HoopTracker
         A basketball analytics tracker built on YOLOv5 and OpenCV.
         Simply upload a video in the side bar and click "Process Video."
     ''')
@@ -88,6 +101,8 @@ def processing_page():
 
 # Display Data
 def results_page():
+    st.video(open(fetch_processed_video(), 'rb').read())
+
     st.markdown('''
         # Results
         Here are the stats.
@@ -149,7 +164,7 @@ def setup_sidebar():
     col1, col2 = st.sidebar.columns([1,17])
     consent_check = col1.checkbox(label=" ", label_visibility='hidden')
     col2.caption('''
-        I have read and agree to HoopTrack's
+        I have read and agree to HoopTracker's
         [terms of services.](https://github.com/CornellDataScience/Ball-101)
     ''')
 

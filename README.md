@@ -11,20 +11,20 @@ Building a service for the community at large + low budget sports programs for S
 ├── data
 │   ├── local-data # model testing data
 │   ├── models-data # trained model data
-│   ├── loader.py # (optional) data loader
 ├── src
 │   ├── config.json # global configs for models and stats
-│   ├── main.py
+│   ├── main.py # control loop module
 │   ├── modelrunner.py
 │   ├── statrunner.py
 │   ├── state.py # object state of tracked game
-│   ├── utils.py
-├── models # ml models: yolov5 and opencv
+├── model # ml models: yolov5 and opencv
+│   ├── temp # stores user data
+│   ├──   ├── output # model-processed user data
+│   ├── yolov5
 ├── stats # calculations logic
 │   ├── statistics.py
 ├── view # app frontend
 │   ├── app.py
-├── test
 ```
 
 ## Setup Instructions
@@ -41,6 +41,8 @@ Start the server backend by running
 cd api
 uvicorn backend:app --reload
 ```
+
+See READMEs in `view` for information on frontend and `src` for CI testing.
 
 ## LucidChart Pipeline Diagram 
 https://lucid.app/documents/embedded/5283e500-286d-4b60-9a31-6ab294866694?invitationId=inv_28b23f10-a3e4-4131-b291-fa378f5a1b4e#
