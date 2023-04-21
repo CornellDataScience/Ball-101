@@ -16,13 +16,6 @@ class Bin:
     def __str__(self):
         return 'Bin('+str(round(self.value,3))+','+str(self.one_lower)+','+str(self.one_upper)+','+str(self.two_lower)+','+str(self.two_upper)+')'
 
-class Frame:
-    def __init__(self,frame_id:int,player_dict:dict):
-        self.id = frame_id
-        self.dict = player_dict
-
-    def __str__(self):
-        return 'Frame '+str(self.id)+' with players '+str(self.dict.keys())
 
 class Render:
     def __init__(self, video_path:str, display_images:bool=False):
@@ -33,7 +26,8 @@ class Render:
         self.COLOR_SMOOTHING = 5
         self.HALF_COURT_BOUNDARY = np.array([(2043,1920),(2043,35),(37,35),(37,1920)])
         self.BOX_BOUNDARY = np.array([(1277,798),(1277,35),(803,35),(803,798)])
-        _, self.bgr_img = cv.VideoCapture(self.VIDEO_PATH).read()
+        video = cv.VideoCapture(self.VIDEO_PATH)
+        _, self.bgr_img = video.read()
         self.ycrcb_img = cv.cvtColor(self.bgr_img,cv.COLOR_BGR2YCrCb)
         self.hsv_img = cv.cvtColor(self.bgr_img, cv.COLOR_BGR2HSV)
         self.gray_img = cv.cvtColor(self.bgr_img, cv.COLOR_BGR2GRAY)
@@ -54,11 +48,15 @@ class Render:
 
         self.DISPLAY_IMAGES = display_images
         if self.DISPLAY_IMAGES == True:
-            self.detect_courtlines_and_display()
+            self.homography = self.detect_courtlines_and_display()
         else:
-            self.detect_courtlines()
+            self.homograpy = self.detect_courtlines()
 
-    def render_video(self,states:dict[int,dict[str,dict]],players:list[str],filename:str):
+    def render_video(self,states:list[dict],players:list[str],filename:str):
+        '''
+        Takes into player position data, applied homography, and renders video stored in filename
+        @Preconditions, states is list of dictionary each with key "frame_no"
+        '''
         # Create a blank image to use as the background for each frame
         background = cv.cvtColor(self.true_map,cv.COLOR_GRAY2BGR)
         height, width, _ = background.shape
@@ -74,7 +72,12 @@ class Render:
                                         'color':(random.randint(0,256),random.randint(0,256),random.randint(0,256))}})
         
         # find duration of video
-        dur = max(states.keys())
+        dur = 0
+        for frame in states:
+            if frame['frameno'] > dur:
+                dur = frame['frameno']
+
+        frame_index = 0
 
         # Loop through each time step
         for t in range(1,dur+30):
@@ -82,22 +85,32 @@ class Render:
             frame = background.copy()
 
             # Get dictionary of positions at each frame 
-            if int(t) in states:
+            if states[frame_index] == t:
                 state = states[t]
                 for player in players:
                     if player in state:
                         pd = state[player]
-                        x, y = self.transform_point(pd['x'],pd['y'])
+                        x, y = (pd['xmin']+pd['xmax'])/2.0, pd['ymax']
+                        x, y = self.transform_point(x,y)
                         player_state[player].update({'pos':(int(x), int(y))})
+                frame_index += 1
             
             # Loop through each point and draw it on the frame
             for player in players:
-                cv.circle(frame, player_state[player]['pos'], 20, player_state[player]['color'], -1)
-            
+                pos = player_state[player]['pos']
+                color = player_state[player]['color']
+                font = cv.FONT_HERSHEY_SIMPLEX
+                thickness = 2
+                font_scale = 1
+                radius = 20
+                text_width = cv.getTextSize(player, font, font_scale, thickness)[0][0]
+                cv.circle(img=frame, center=pos, radius=radius, color=color, thickness=-1)
+                cv.putText(img=frame,text=player,org=(pos[0]-(text_width//2),pos[1]-radius-10),
+                           fontFace=cv.FONT_HERSHEY_SIMPLEX,fontScale=1,color=color,thickness=2,lineType=cv.LINE_AA)
+
             # Write the frame to the video writer
             video_writer.write(frame)
 
-        
         # Release the video writer
         video_writer.release()
 
@@ -111,12 +124,14 @@ class Render:
         thick_masked_edges = self.thicken_edges(masked_edges,iterations=1)
         self.masked_edges = thick_masked_edges.copy()
         best_pts = self.find_best_homography(hough_lines)
-        # while self.regress_box_boundary(best_pts):
-        #     print('new goodness',self.evaluate_homography(best_pts,self.BOX_BOUNDARY))
-        # print('to fine tuning')
-        # while self.fine_regress_box_boundary(best_pts):
-        #     print('new goodness',self.evaluate_homography(best_pts,self.BOX_BOUNDARY))
-        self.homography, _ = cv.findHomography(np.array(best_pts),self.BOX_BOUNDARY)
+        while True:
+            if not self.regress_box_boundary(best_pts):
+                break
+        while True:
+            if not self.fine_regress_box_boundary(best_pts):
+                break
+        homography, _ = cv.findHomography(np.array(best_pts),self.BOX_BOUNDARY)
+        return homography
 
     def detect_courtlines_and_display(self):
         'Finds best homography and displays images of progress'
@@ -124,20 +139,17 @@ class Render:
         mask = self.get_mask(self.img, bins[0])
         canny_edges = self.get_canny(self.gray_img)
         masked_edges = self.apply_mask(canny_edges, mask)
-        
-
         hough_lines = self.get_hough(masked_edges,threshold=180)
         hough = self.apply_hough(self.bgr_img, hough_lines)
         thick_masked_edges = self.thicken_edges(masked_edges,iterations=1)
         self.masked_edges = thick_masked_edges.copy()
         best_pts = self.find_best_homography(hough_lines)
-        
         while self.regress_box_boundary(best_pts):
             print('new goodness',self.evaluate_homography(best_pts,self.BOX_BOUNDARY))
         print('to fine tuning')
         while self.fine_regress_box_boundary(best_pts):
             print('new goodness',self.evaluate_homography(best_pts,self.BOX_BOUNDARY))
-
+        homography, _ = cv.findHomography(np.array(best_pts),self.BOX_BOUNDARY)
 
         test_bgr = self.bgr_img.copy()
         color_map = cv.cvtColor(self.true_map,cv.COLOR_GRAY2BGR)
@@ -152,10 +164,10 @@ class Render:
         second_gray_img = self.apply_gray_homography(self.masked_edges,best_pts,or_mask=False)
 
         
-        # cv.imshow('original', self.bgr_img)
-        # cv.imshow('mask', mask)
-        # cv.imshow('canny', canny_edges)
-        # cv.imshow('canny masked', masked_edges)
+        cv.imshow('original', self.bgr_img)
+        cv.imshow('mask', mask)
+        cv.imshow('canny', canny_edges)
+        cv.imshow('canny masked', masked_edges)
         cv.imshow('hough transform', hough)
         cv.imshow('new test', new_img)
         cv.imshow('gray union', new_gray_img)
@@ -166,6 +178,7 @@ class Render:
         if cv.waitKey(0) & 0xff == 27:
             cv.destroyAllWindows()
 
+        return homography
 
     def bin_pixels(self,img:np.ndarray, one_bins:int=16, two_bins:int=16):
         '''
@@ -206,7 +219,6 @@ class Render:
                                 int(round(two_step*(col+1)))))
         return sorted(top_bins, reverse=True, key=lambda bin: bin.value)
         
-
     def get_mask(self,img:np.ndarray, bin:Bin):
         '''
         Applies color range from specified bin
@@ -226,18 +238,14 @@ class Render:
         mask = cv.morphologyEx(mask,cv.MORPH_CLOSE,kernel,iterations=8) #get all court
         return cv.morphologyEx(mask,cv.MORPH_OPEN,kernel,iterations=30) #remove distractions
 
-
     def apply_mask(self,img:np.ndarray, mask:np.ndarray):
         'Applies bitwise and mask'
         return cv.bitwise_and(img,img,mask=mask)
-
-
 
     def get_canny(self,img:np.ndarray, threshold1=10, threshold2=100):
         'Returns canny edge detected image, two thresholds for two passes'
         return cv.Canny(img,threshold1,threshold2)
 
-    
     def thicken_edges(self,img:np.ndarray, iterations:int=2):
         '''
         Returns dilated image, means for truth image map
@@ -245,8 +253,6 @@ class Render:
         '''
         kernel = np.ones((3,3),np.uint8)
         return cv.morphologyEx(img,cv.MORPH_DILATE,kernel,iterations=iterations)
-
-
 
     def get_hough(self,img:np.ndarray,rho:float=1,theta:float=np.pi/180,threshold:int=200):
         '''
@@ -280,26 +286,95 @@ class Render:
         max_homography = None
         for i1 in range(0,len(hor)):
             for i2 in range(i1+1,len(hor)):
-                # if hor[i2][0][0]-hor[i1][0][0] < 600: #within 100 pixels stop
-                #     continue
                 for j1 in range(len(ver)):
                     for j2 in range(j1+1,len(ver)):
-                        # if ver[j2][0][0]-ver[j1][0][0] > 200:
-                        #     continue
-                        pts = self.get_four_intersections(hor[i1][0],hor[i2][0],ver[j1][0],ver[j2][0])
+                        pts = self.get_four_intersections(hor[i2][0],ver[j1][0],hor[i1][0],ver[j2][0])
                         if pts is None:
                             continue
                         goodness = self.evaluate_homography(pts,self.BOX_BOUNDARY)
                         if (goodness > max_goodness):
                             max_goodness = goodness
                             max_homography = pts
-                            if max_goodness > 0.8:
-                                print('max goodness: ',max_goodness)
-                                return max_homography
+
+                        pts = self.get_four_intersections(ver[j2][0],hor[i2][0],ver[j1][0],hor[i1][0])
+                        if pts is None:
+                            continue
+                        goodness = self.evaluate_homography(pts,self.BOX_BOUNDARY)
+                        if (goodness > max_goodness):
+                            max_goodness = goodness
+                            max_homography = pts
         print('max goodness: ',max_goodness)
         return max_homography
     
+    def evaluate_homography(self,pts_src,pts_dst):
+        mapped_edge_img = self.apply_gray_homography(self.masked_edges,pts_src,pts_dst=pts_dst)
+        total = 171053
+        # total = np.count_nonzero(self.invert_grayscale(self.true_map)
+        goodness = float(np.count_nonzero(mapped_edge_img > 100)) / total
+        return goodness
+            
+    def get_four_intersections(self,l1,l2,l3,l4):
+        '''
+        return intersection of four lines
+        OR returns None is intersection of four lines it too close to each other
+        '''
+        p1 = self.get_line_intersection(l1,l2)
+        p2 = self.get_line_intersection(l2,l3)
+        p3 = self.get_line_intersection(l3,l4)
+        p4 = self.get_line_intersection(l4,l1)
+        d1 = self.distance(p1,p2)
+        d2 = self.distance(p2,p3)
+        d3 = self.distance(p3,p4)
+        d4 = self.distance(p4,p1)
+        if (d1<600 or d1>800 or d3<600 or d3>800 or d2<50 or 
+            d2>300 or d4<50 or d4>300 or self.is_not_convex(p1,p2,p3,p4)):
+            return None
+        return (p1,p2,p3,p4)
+
+    def get_line_intersection(self,line1,line2):
+        'Return (x,y) intersection of two lines given as (rho,theta)'
+        rho1, theta1 = line1
+        rho2, theta2 = line2
+        a1 = np.cos(theta1)
+        a2 = np.sin(theta1)
+        b1 = np.cos(theta2)
+        b2 = np.sin(theta2)
+        d = a1*b2 - a2*b1
+        if d==0:
+            return (0,0)
+        x = (rho1*b2-rho2*a2) / d
+        y = (-rho1*b1+rho2*a1) / d
+        return (x,y)
+    
+    def distance(self,pt1,pt2):
+        'Returns euclidean distance between two points (x,y)'
+        return ((pt1[0]-pt2[0])**2 + (pt1[1]-pt2[1])**2)**0.5
+    
+    def is_not_convex(self,*pts):
+        'Return true if points form convex shape'
+        N = len(pts)
+        prev, curr = 0, 0
+        for i in range(N):
+            temp = [pts[i],pts[(i+1)%N],pts[(i+2)%N]]
+            curr = self.cross_product(temp)
+            if curr != 0:
+                if curr * prev < 0:
+                    return True
+                else:
+                    prev = curr
+        return False
+    
+    def cross_product(self,A):
+        'Returns cross of 2 vectors in R2'
+        X1 = (A[1][0] - A[0][0])
+        Y1 = (A[1][1] - A[0][1])
+        X2 = (A[2][0] - A[0][0])
+        Y2 = (A[2][1] - A[0][1])
+        return (X1 * Y2 - Y1 * X2)
+
     def regress_box_boundary(self,pts_src,delta=range(1,40)):
+        '''Adjust box boundary to get better homography
+        @Returns True is box boundary was adjusted and False otherwise'''
         prev_good = self.evaluate_homography(pts_src,self.BOX_BOUNDARY)
         box_bounds = []
         for i in [0]:
@@ -327,6 +402,8 @@ class Render:
             return True
     
     def fine_regress_box_boundary(self,pts_src,delta=range(1,5)):
+        '''Adjust box boundary finely to get better homography
+        @Returns True is box boundary was adjusted and False otherwise'''
         prev_good = self.evaluate_homography(pts_src,self.BOX_BOUNDARY)
         box_bounds = []
         for i in [0,1,2,3]:
@@ -351,90 +428,6 @@ class Render:
             self.BOX_BOUNDARY = box_bounds[max_index]
             return True
     
-    def evaluate_homography(self,pts_src,pts_dst):
-        mapped_edge_img = self.apply_gray_homography(self.masked_edges,pts_src,pts_dst=pts_dst)
-        total = 171053
-        # total = np.count_nonzero(self.invert_grayscale(self.true_map)
-        goodness = float(np.count_nonzero(mapped_edge_img > 100)) / total
-        return goodness
-
-
-    def filter_similar_lines(self,lines,rho_threshold=2,theta_threshold=1.001*(np.pi/180)):
-        'Removes lines with similar rho and theta values.'
-        if len(lines) == 0: 
-            return lines
-        ret = [lines[0]]
-        for line in lines:
-            skip = False
-            for i in range(len(ret)-1,-1,-1):
-                if abs(line[0][0] - ret[i][0][0]) <= rho_threshold:
-                    if abs(line[0][1] - ret[i][0][1]) <= theta_threshold:
-                        skip = True
-                        break
-                else:
-                    break
-            if not skip:
-                ret.append(line)
-        return ret
-                    
- 
-    def get_four_intersections(self,hor1,hor2,ver1,ver2):
-        '''
-        return intersection of four lines
-        OR returns None is intersection of four lines it too close to each other
-        '''
-        p1 = self.get_line_intersection(hor2,ver1)
-        p2 = self.get_line_intersection(hor1,ver1)
-        p3 = self.get_line_intersection(hor1,ver2)
-        p4 = self.get_line_intersection(hor2,ver2)
-        d1 = self.distance(p1,p2)
-        d2 = self.distance(p2,p3)
-        d3 = self.distance(p3,p4)
-        d4 = self.distance(p4,p1)
-        if (d1<600 or d1>800 or d3<600 or d3>800 or d2<50 or 
-            d2>300 or d4<50 or d4>300 or self.is_not_convex(p1,p2,p3,p4)):
-            return None
-        return (p1,p2,p3,p4)
-
-    def get_line_intersection(self,line1,line2):
-        'Return (x,y) intersection of two lines given as (rho,theta)'
-        rho1, theta1 = line1
-        rho2, theta2 = line2
-        a1 = np.cos(theta1)
-        a2 = np.sin(theta1)
-        b1 = np.cos(theta2)
-        b2 = np.sin(theta2)
-        d = a1*b2 - a2*b1
-        if d==0:
-            return (0,0)
-        x = (rho1*b2-rho2*a2) / d
-        y = (-rho1*b1+rho2*a1) / d
-        return (x,y)
-    
-    def distance(self,pt1,pt2):
-        return ((pt1[0]-pt2[0])**2 + (pt1[1]-pt2[1])**2)**0.5
-    
-    def is_not_convex(self,*pts):
-        N = len(pts)
-        prev, curr = 0, 0
-        for i in range(N):
-            temp = [pts[i],pts[(i+1)%N],pts[(i+2)%N]]
-            curr = self.cross_product(temp)
-            if curr != 0:
-                if curr * prev < 0:
-                    return True
-                else:
-                    prev = curr
-        return False
-    
-    def cross_product(self,A):
-        X1 = (A[1][0] - A[0][0])
-        Y1 = (A[1][1] - A[0][1])
-        X2 = (A[2][0] - A[0][0])
-        Y2 = (A[2][1] - A[0][1])
-        return (X1 * Y2 - Y1 * X2)
-
-
     def apply_hough(self,img:np.ndarray, lines:list):
         'Return image with hough transform lines drawn on top'
         out = img.copy()
@@ -447,7 +440,8 @@ class Render:
             cv.line(out,(x1,y1),(x2,y2),[0,0,255])
         return out
     
-    def transform_point(self,x,y):
+    def transform_point(self,x:float,y:float):
+        'Applies self.homography to point (x,y) and returns transformed point (x",y")'
         point = np.array([[x, y]], dtype=np.float32)
 
         # Reshape the point into a 1x1x2 array (required by cv2.perspectiveTransform())
@@ -588,20 +582,7 @@ class Render:
 
 if __name__ == '__main__':
     video_path = os.path.join('court-detection','temp','demo.mov')
-    render = Render(video_path=video_path,display_images=False)
+    render = Render(video_path=video_path,display_images=True)
 
-    p1 = {'x' : 100,'y' : 200}
-    p2 = {'x' : 150,'y' : 400}
-    p3 = {'x' : 200,'y' : 650}
-    d1 = {'one' : p1,'two' : p3}
-    d2 = {'one' : p2,'two' : p1}
-    d3 = {'one' : p3,'two' : p1}
-    states = {
-        1 : d1,
-        30 : d2,
-        60 : d3
-    }
-    players = ['one','two']
-
-    filename = os.path.join('court-detection','temp','point.mp4')
-    render.render_video(states,players,filename)
+    # filename = os.path.join('court-detection','temp','point.mp4')
+    # render.render_video(states,players,filename)
