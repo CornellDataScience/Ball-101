@@ -36,7 +36,7 @@ def curr_possession(players, ball):
     return max_player
 
 
-def possession_list(state, thresh=20):
+def possession_list(frames, thresh=20):
     '''
     Input:
         state: a StatState class that holds all sorts of information
@@ -44,30 +44,34 @@ def possession_list(state, thresh=20):
         thresh: number of frames for ball overlapping with player
                 in order to count as possession
     Output:
-        possession_list [list]: list of player ids in the order of ball
-        possession throughout the video
+        possession_list [list(tuples)]: list of tuples of the form
+                                        (playerid, startframe, endframe)
     '''
     # list of frames where a frame is a dictionary with key classes and
     # values xmin, ymin, xmax, ymax
     # for key = players value has the format {players:
     # {playerid1: {xmin: val, ymin: val, xmax: val, ymax: val}}}
-    states = state.states
+    states = frames
     counter = 0
     current_player = None
     pos_lst = []
-    for i, frame in enumerate(states):
+    for frame in states:
         if frame.get("ball") is None:
             continue
         poss = curr_possession(frame.get("players"), frame.get("ball"))
 
+        print(frame)
+
         if poss is None:
             continue
+        print("achieved")
 
         if poss == current_player:
             counter += 1
         else:
             if counter >= thresh:
-                pos_lst.append((current_player, i-counter, i))
+                pos_lst.append((current_player, frame.get(
+                    "frameno")-counter, frame.get("frameno")))
             current_player = poss
             counter = 0
             # Can make this more robust by allowing for a certain number of
@@ -141,7 +145,7 @@ def possible_teams(players):
     return acc
 
 
-def team_split(state):
+def team_split(players, frames):
     '''
     Input:
         state: a StatState class that holds all sorts of information
@@ -152,10 +156,7 @@ def team_split(state):
         pos_lst [list[tuple]]: list of player ids in the order of ball
                                 possession with start and finish frames
     '''
-    # dict of player stats
-    players = state.players.keys()
-    # number of people total
-    pos_lst = possession_list(state, players)
+    pos_lst = possession_list(frames, thresh=1)
     player_idx = {player: i for i, player in enumerate(players)}
     connects = connections(pos_lst, players, player_idx)
     teams = possible_teams(players)
@@ -167,10 +168,10 @@ def team_split(state):
         team2 = list(team[1])
         for player1 in team1:
             for player2 in team2:
-                count += connects[player_idx.get(player1)]
-                [player_idx.get(player2)]
-                count += connects[player_idx.get(player2)]
-                [player_idx.get(player1)]
+                count += (connects[player_idx.get(player1)]
+                          [player_idx.get(player2)])
+                count += (connects[player_idx.get(player2)]
+                          [player_idx.get(player1)])
         if count < min_count:
             min_count = count
             best_team = team
