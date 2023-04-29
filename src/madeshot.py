@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import pandas as pd
 
 
@@ -75,3 +76,6 @@ def madeshot(file_path):
                     rim_collision_end = 0
 
     return shots_made
+
+print(new_rim('/data/test2.txt'))
+print(madeshot('/data/test2.txt'))
