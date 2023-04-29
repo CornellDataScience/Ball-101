@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import pandas as pd
 
 
@@ -38,7 +37,7 @@ def madeshot(file_path):
             lst = [int(i) for i in line.split()]
             frame = lst[0]
             # ball = [Some Number]
-            if lst[1] == 3:
+            if lst[1] == 0:
                 ball_x = lst[3] + lst[5]/2
                 ball_y = lst[4] - lst[6]/2
 
@@ -77,5 +76,6 @@ def madeshot(file_path):
 
     return shots_made
 
-print(new_rim('/data/test2.txt'))
-print(madeshot('/data/test2.txt'))
+
+print(new_rim('data/test2.txt'))
+print(madeshot('data/test2.txt'))
