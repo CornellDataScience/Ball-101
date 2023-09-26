@@ -5,7 +5,7 @@ from ultralytics import YOLO
 model = YOLO('yolov8n.pt')
 
 # Open the video file
-video_path = "test2_10seconds.mp4"
+video_path = "training_data.mp4"
 cap = cv2.VideoCapture(video_path)
 
 # Loop through the video frames
@@ -16,7 +16,7 @@ while cap.isOpened():
     if success:
         # Run YOLOv8 tracking on the frame, persisting tracks between frames
         # change tracker to botsort.yaml or bytetrack.yaml
-        results = model.track(frame, persist=True, tracker="bytetrack.yaml")
+        results = model.track(frame, persist=True, tracker="botsort.yaml")
 
         # Visualize the results on the frame
         annotated_frame = results[0].plot()
