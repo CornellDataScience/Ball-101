@@ -39,7 +39,7 @@ class ModelRunner:
         os.remove(input_path)
         os.rename(dummy_path, input_path)
 
-
+    #modify this function
     def run(self):
         """
         Executes StrongSORT models and its related video pre- and post- processing.
