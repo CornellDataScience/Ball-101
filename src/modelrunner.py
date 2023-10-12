@@ -6,6 +6,7 @@ import cv2
 import pickle
 import subprocess
 from typing import Tuple
+from botsort import sort 
 
 class ModelRunner:
     """
@@ -46,10 +47,12 @@ class ModelRunner:
         """
         # comment first two lines out to exclude running the model
         self.drop_frames(self.video_path)
+        self.output_dict = sort()
+        '''
         subprocess.run(['bash', 'src/StrongSORT-YOLO/run_tracker.sh'])
         with open('tmp/output.pickle', 'rb') as f:
             self.output_dict = pickle.load(f)
-
+        '''
     
     def fetch_output(self) -> Tuple[str, str]:
         """
