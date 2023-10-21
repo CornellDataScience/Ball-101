@@ -6,6 +6,7 @@ import cv2
 import pickle
 import subprocess
 from typing import Tuple
+from botsort import Bmain
 
 class ModelRunner:
     """
@@ -46,8 +47,9 @@ class ModelRunner:
         Executes StrongSORT models and its related video pre- and post- processing.
         """
         # comment first two lines out to exclude running the model
-        # self.drop_frames(self.video_path)
-        # subprocess.run(['bash', 'src/StrongSORT-YOLO/run_tracker.sh'])
+        self.drop_frames(self.video_path)
+        subprocess.run(['bash', 'src/StrongSORT-YOLO/run_tracker.sh'])
+        self.output_dict = Bmain()
         with open('tmp/output.pickle', 'rb') as f:
             self.output_dict = pickle.load(f)
 

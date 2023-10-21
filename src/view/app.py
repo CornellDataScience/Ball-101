@@ -185,7 +185,7 @@ def fetch_result_video():
     TODO change to calling backend instead of accessing from repo
     '''
     if st.session_state.processed_video is None:
-        st.session_state.processed_video = 'tmp/court_video_reenc.mp4'
+        st.session_state.processed_video = 'tmp/court_video.mp4'
     return st.session_state.processed_video
 
 
