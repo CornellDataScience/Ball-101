@@ -238,7 +238,6 @@ class PlayerFrame:
             return False
         return True
 
-
 class Keypoint:
     """
     Keypoint class containing the coordinates and confidence of a keypoint
@@ -264,7 +263,6 @@ class Keypoint:
         except AssertionError:
             return False
         return True
-
 
 class Frame:
     "Frame class containing frame-by-frame information"
