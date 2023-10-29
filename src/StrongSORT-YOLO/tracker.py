@@ -14,12 +14,18 @@ WEIGHTS = ROOT / "weights"
 
 def track_person(res, source_mov: str, idx: int):
     """tracks persons in video and puts data in out_queue"""
-    out_array_pr, vid_path = track_v7.run(
+   # Set the parameters for the detect function
+  
+    classes = [1, 2]
+    save_vid = False
+
+    # Call the detect function
+    out_array_pr, vid_path = track_v7.detect(
         source=source_mov,
-        classes=[1, 2],
         yolo_weights=WEIGHTS / "best.pt",
-        save_vid=False,
-        ret=True,
+        classes=classes,
+        save_vid=save_vid,
+    
     )
 
     res[idx] = (out_array_pr, vid_path)
@@ -29,13 +35,17 @@ def track_person(res, source_mov: str, idx: int):
 
 
 def track_basketball(res, source_mov: str, idx: int):
+   
+    classes = [1, 2]
+    save_vid = False
     """tracks basketball in video and puts data in out_queue"""
-    out_array_bb, bb_vid_path = track_v7.run(
-        source=source_mov,
+    out_array_bb, bb_vid_path = track_v7.detect(
+       source=source_mov,
         yolo_weights=WEIGHTS / "best_basketball.pt",
-        save_vid=False,
-        ret=True,
-        skip_big=True,
+        
+        classes=classes,
+        save_vid=save_vid,
+        ret=True
     )
 
     res[idx] = (out_array_bb, bb_vid_path)

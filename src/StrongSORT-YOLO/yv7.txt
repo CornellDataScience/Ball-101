@@ -69,9 +69,8 @@ from strong_sort.utils.parser import get_config
 from strong_sort.strong_sort import StrongSORT
 
 
-def detect(save_img=False, line_thickness=1,
+def run(save_img=False, line_thickness=1,
         source='0',
-        save_dir=False,
         yolo_weights=WEIGHTS / 'yolov5m.pt',  # model.pt path(s),
         strong_sort_weights=WEIGHTS / 'osnet_x0_25_msmt17.pt',  # model.pt path,
         config_strongsort=ROOT / 'strong_sort/configs/strong_sort.yaml',
@@ -136,7 +135,7 @@ def detect(save_img=False, line_thickness=1,
     imgsz = check_img_size(imgsz, s=stride)  # check img_size
 
     if trace:
-        model = TracedModel(model, device, 640)
+        model = TracedModel(model, device, opt.img_size)
 
     if half:
         model.half()  # to FP16
@@ -167,7 +166,7 @@ def detect(save_img=False, line_thickness=1,
 
     # initialize StrongSORT
     cfg = get_config()
-    cfg.merge_from_file("strong_sort/configs/strong_sort.yaml")
+    cfg.merge_from_file(opt.config_strongsort)
 
     # Create as many strong sort instances as there are video sources
     strongsort_list = []
@@ -216,16 +215,16 @@ def detect(save_img=False, line_thickness=1,
         dt[0] += t2 - t1
 
         # Inference
-        pred = model(img, augment="weights/yolov7-tiny.pt")[0]
+        pred = model(img, augment=opt.augment)[0]
         t3 = time_synchronized()
         dt[1] += t3 - t2
         # Apply NMS
         pred = non_max_suppression(
             pred,
-            0.25,
-            0.45,
-            None,
-            agnostic=False,
+            opt.conf_thres,
+            opt.iou_thres,
+            classes=opt.classes,
+            agnostic=opt.agnostic_nms,
         )
         dt[2] += time_synchronized() - t3
 
