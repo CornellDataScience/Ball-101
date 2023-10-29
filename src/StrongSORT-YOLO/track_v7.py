@@ -71,7 +71,7 @@ from strong_sort.strong_sort import StrongSORT
 
 def detect(save_img=False, line_thickness=1,
         source='0',
-        save_dir=False,
+    
         yolo_weights=WEIGHTS / 'yolov5m.pt',  # model.pt path(s),
         strong_sort_weights=WEIGHTS / 'osnet_x0_25_msmt17.pt',  # model.pt path,
         config_strongsort=ROOT / 'strong_sort/configs/strong_sort.yaml',
@@ -118,9 +118,10 @@ def detect(save_img=False, line_thickness=1,
     exp_name = "exp"  # save results to project/name
     strong_sort_weights = WEIGHTS / "osnet_x0_25_msmt17.pt"  # model.pt path,
     config_strongsort = ROOT / "strong_sort/configs/strong_sort.yaml"
+    
+    
+    save_dir = increment_path(Path(project) / exp_name, exist_ok=exist_ok)  # increment run
    
-
-
     # Directories
     (save_dir / "labels" if save_txt else save_dir).mkdir(
         parents=True, exist_ok=True
