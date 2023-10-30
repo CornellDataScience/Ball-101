@@ -28,14 +28,14 @@ def load_config(path):
     return config
 
 
-def main(video_path: str, results_out: str = "tmp/results.txt") -> None:
+def main(video_path:str, results_out:str= "tmp/results.txt") -> None:
     """
     Sequentially initialises and runs model running and processing tasks.
-    Input:
+    Input: 
         video_path: relative path to video to process
         results_out: relative path to write results
     Side Effect:
-        Writes to results [results_out]
+        Writes to results [results_out] 
     """
     config = load_config("config.yaml")
     model_vars = config["model_vars"]
