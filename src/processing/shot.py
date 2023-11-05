@@ -1,4 +1,6 @@
 from state import GameState, ShotAttempt, Box, Interval
+from sklearn.linear_model import LinearRegression
+import numpy as np
 
 
 class ShotFrame:
@@ -14,7 +16,48 @@ def detect_shot(state: GameState, inte: Interval, window: int) -> ShotAttempt:
     """
     sa = ShotAttempt(inte.playerid, inte.start, inte.end)
     sfs: list[ShotFrame] = []
+
+
+    # ==========IMPLEMENTATION OF LINEAR REGRESSION METHOD (NEW)==========
+    # get the ball center positions for each frame
+    ball_positions = [(i, (state.frames[i].ball.box.xmin + state.frames[i].ball.box.xmax) / 2, (state.frames[i].ball.box.ymin + state.frames[i].ball.box.ymax) / 2) for i in range(sa.start, sa.end + 1)]
+
+    if len(ball_positions) < 2:
+        return sa
+    
+
+    # perform linear regression
+    x = np.array([[pos[1] for pos in ball_positions]])
+    y = np.array([[pos[2] for pos in ball_positions]])
+    model = LinearRegression().fit(x, y)
+
+    # use the model to predict the y-position of the ball at the rim
+    rim_y = model.predict([[(state.frames[sa.end].rim.xmin + state.frames[sa.end].rim.xmax) / 2]])[0]
+    true_y = (state.frames[sa.end].rim.ymin + state.frames[sa.end].rim.ymax) / 2
+
+    # check if predicted y-coord is within hoop's y-range
+    if rim_y >= true_y - window and rim_y <= true_y + window:
+        sa.made = True
+
+        # find the frame where the ball is at the rim
+        for i in range(sa.start, sa.end + 1):
+            ball = state.frames[i].ball
+            if ball is not None:
+                if ball.box.ymin <= rim_y and ball.box.ymax >= rim_y:
+                    sa.frame = i
+                    break
+                
+    else:
+        sa.made = False
+        sa.frame = sa.end
+
+    return sa
+
+    # ==========IMPLEMENTATION OF WINDOW METHOD (OLD)==========
+
     for i in range(sa.start, sa.end + 1):  # construct sfs of shot frames
+
+
         rim = state.frames[i].rim
         h = rim.ymax - rim.ymin
         top = Box(rim.xmin, rim.ymin - h, rim.xmax, rim.ymax - h)  # top rim box
