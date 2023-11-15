@@ -5,6 +5,7 @@ from modelrunner import ModelRunner
 from processrunner import ProcessRunner
 import argparse
 from args import DARGS, setup_args
+import gc
 
 
 def main(args=DARGS) -> None:
