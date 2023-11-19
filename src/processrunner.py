@@ -23,20 +23,24 @@ class ProcessRunner:
         parse.parse_sort_output(self.state, self.args["people_file"])
         self.state.recompute_frame_count()
         if not self.args["skip_player_filter"]:
-            threshold = min(300, len(self.state.frames) / 3)  # in case of short video
+            # in case of short video
+            threshold = min(300, len(self.state.frames) / 3)
             self.state.filter_players(threshold=threshold)
 
         parse.parse_sort_output(self.state, self.args["ball_file"])
         parse.parse_pose_output(self.state, self.args["pose_file"])
 
     def run_possession(self):
-        '''self.state.recompute_possesssions()
-        self.state.recompute_possession_list(
-            threshold=self.args["filter_threshold"],
-            join_threshold=self.args["join_threshold"],
-        )'''   
         self.state.recompute_possessions_v1()
-        self.state.compute_possession_intervals()
+        self.state.recompute_possessions_v2()
+        self.state.recompute_possessions_v3()
+        self.state.recompute_possessions_v4()
+        # self.state.create_possession_intervals()
+        '''self.state.create_possession_intervals()
+        self.state.recompute_possesssions()'''
+        # in case of short video
+        threshold = min(100, len(self.state.frames) / 3)
+        self.state.filter_players(threshold=threshold)
         self.state.recompute_pass_from_possession()
 
     def run_team_detect(self):
@@ -59,7 +63,8 @@ class ProcessRunner:
             return
         videoRender = render.VideoRender(homography)
         videoRender.render_video(self.state, self.args["minimap_file"])
-        videoRender.reencode(self.args["minimap_file"], self.args["minimap_temp_file"])
+        videoRender.reencode(
+            self.args["minimap_file"], self.args["minimap_temp_file"])
 
     def run_video_processor(self):
         video_creator = video.VideoCreator(

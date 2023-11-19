@@ -2,12 +2,14 @@
 Module containing state of game statistics
 """
 from enum import Enum
+from pose_estimation.pose_estimate import KeyPointNames
 import sys
 import math
-from collections import deque, defaultdict
-
+from collections import deque
 
 # maintains dictionary functionality, if desired:
+
+
 def todict(obj):
     "to dictionary, recursively"
     if isinstance(obj, dict):
@@ -228,19 +230,21 @@ class PlayerFrame:
         self.keypoints: dict[str, Keypoint] = {}
         "keypoints of the player"
 
-    def set_keypoints(self, keypoints: list) -> None:
+    def set_keypoints(self, keypoints: list, confidences: list) -> None:
         "Sets the keypoints for the player"
         try:
-            assert len(keypoints) == len(KeyPointNames.list) * 2
+            assert len(keypoints) == len(confidences)
+            assert len(keypoints) == len(KeyPointNames.list)
         except Exception as e:
             print(len(keypoints))
-            print(len(KeyPointNames.list) * 2)
+            print(len(confidences))
+            print(len(KeyPointNames.list))
             print("Could not load keypoints, list length error")
             return
 
-        for i in range(len(KeyPointNames.list)):
-            x, y = keypoints[2*i:2*i+2]
-            confidence = 1  # can put into confidence later
+        for i in range(len(keypoints)):
+            x, y = keypoints[i]
+            confidence = confidences[i]
             key = KeyPointNames.list[i]
             self.keypoints[key] = Keypoint(x, y, confidence)
 
@@ -258,41 +262,6 @@ class PlayerFrame:
         except AssertionError:
             return False
         return True
-
-
-class KeyPointNames:
-    list = [
-        "nose",
-        "left_eye",
-        "right_eye",
-        "left_ear",
-        "right_ear",
-        "left_shoulder",
-        "right_shoulder",
-        "left_elbow",
-        "right_elbow",
-        "left_wrist",
-        "right_wrist",
-        "left_hip",
-        "right_hip",
-        "left_knee",
-        "right_knee",
-        "left_ankle",
-        "right_ankle",
-    ]
-
-
-class AngleNames:
-    list = [
-        "left_elbow",
-        "right_elbow",
-        "left_knee",
-        "right_knee",
-        "right_shoulder",
-        "left_shoulder",
-        "right_hip",
-        "left_hip",
-    ]
 
 
 class Keypoint:
@@ -344,7 +313,8 @@ class Frame:
         "frame number, Required: non-negative integer"
 
         # MUTABLE
-        self.players: dict[str, PlayerFrame] = {}  # ASSUMPTION: MULITPLE PEOPLE
+        # ASSUMPTION: MULITPLE PEOPLE
+        self.players: dict[str, PlayerFrame] = {}
         "dictionary of form {player_[id] : PlayerFrame}"
         self.ball: BallFrame = None  # ASSUMPTION: SINGLE BALLS
         "dictionary of form {ball_[id] : BallFrame}"
@@ -531,6 +501,13 @@ class GameState:
         self.team1: TeamStats = TeamStats()
         self.team2: TeamStats = TeamStats()
 
+        self.no_possession_distance = 100
+        self.player_scores = []  # to keep track of possession over frames
+        self.rolling_scores = []  # to keep track of possession over frames
+        self.dominant_possessions = []  # to keep track of possession over frames
+        self.possession_history = []  # to keep track of possession over frames
+        self.lookahead = 5
+
     def populate_team_stats(self):
         """
         Populates the scores and shots made/attempted for each team
@@ -577,6 +554,16 @@ class GameState:
             for c in self.passes[p]:
                 self.players[p].passes.update({c: self.passes[p][c]})
 
+    def recompute_frame_count(self):
+        "recompute frame count of all players in frames"
+        for ps in self.players.values():  # reset to 0
+            ps.frames = 0
+        for frame in self.frames:
+            for pid in frame.players:
+                if pid not in self.players:
+                    self.players.update({pid: PlayerState()})
+                self.players.get(pid).frames += 1
+
     def recompute_possesssions(self):
         "naively compute frame-by-frame possession of ball"
         for frame in self.frames:
@@ -595,6 +582,7 @@ class GameState:
                 lst, key=lambda x: x[1]
             )  # sorted from least to greatest intersect
             frame.possessions = [x for (x, _) in sorted_lst]
+            print([frame.possessions])
 
     def recompute_possession_list(self, threshold=20, join_threshold=20):
         """
@@ -661,16 +649,6 @@ class GameState:
             else:
                 i += 1  # next interval
 
-    def recompute_frame_count(self):
-        "recompute frame count of all players in frames"
-        for ps in self.players.values():  # reset to 0
-            ps.frames = 0
-        for frame in self.frames:
-            for pid in frame.players:
-                if pid not in self.players:
-                    self.players.update({pid: PlayerState()})
-                self.players.get(pid).frames += 1
-
     def filter_players(self, threshold: int):
         "removes all players which appear for less than [threshold] frames"
         self.recompute_frame_count()
@@ -696,138 +674,139 @@ class GameState:
             self.passes[p1][p2] += 1
 
     def recompute_possessions_v1(self):
-        "Compute frame-by-frame possession of ball with a rolling window of 30 frames"
-        # Dictionary to track frequency of possessions in the last 30 frames
-        possession_frequency = {}
-        # Queue to maintain the rolling window of past 30 frames
-        recent_possessions = deque(maxlen=20)
-        proximity_threshold = 250
-
+        """
+        Compute frame-by-frame possession of the ball.
+        Players are ranked based on their distance to the ball and the intersection area.
+        The ranks are added together, and the player with the lowest score is considered
+        the most likely possessor.
+        """
         for index, frame in enumerate(self.frames):
             if frame.ball is None:
-                # Repeat the same possession frame as the leader of the previous possessions
-                if recent_possessions:
-                    frame.possessions = list(recent_possessions[-1])
-                else:
-                    frame.possessions = []
+                frame.possessions = []
                 continue
 
-            distance_list: list[(str, float)] = []
-            ball_box: Box = frame.ball.box
+            distance_ranking = []
+            area_ranking = []
+            ball_box = frame.ball.box
 
             for player_id, player in frame.players.items():
-                dist: float = player.box.distance_between_boxes(ball_box)
+                dist = player.box.distance_between_boxes(ball_box)
+                intersection_area = player.box.area_of_intersection(ball_box)
 
-                # Apply stronger advantage for players with frequent previous possession
-                dist *= (0.9 ** possession_frequency.get(player_id, 0))
+                distance_ranking.append((player_id, dist))
+                # Negative area for sorting purpose
+                area_ranking.append((player_id, -intersection_area))
 
-                if dist <= proximity_threshold:
-                    distance_list.append((player_id, dist))
+            # Rank players by distance (lower is better) and intersection area (higher is better)
+            distance_ranking.sort(key=lambda x: x[1])
+            area_ranking.sort(key=lambda x: x[1])
 
-            # Sort by adjusted distance, closest first
-            distance_list.sort(key=lambda x: x[1])
-            frame.possessions = [
-                player_id for player_id, _ in distance_list][:3]
+            # Combine ranks
+            combined_ranks = {}
+            for i, (player_id, _) in enumerate(distance_ranking):
+                combined_ranks[player_id] = combined_ranks.get(
+                    player_id, 0) + i
+            for i, (player_id, _) in enumerate(area_ranking):
+                combined_ranks[player_id] = combined_ranks.get(
+                    player_id, 0) + i
 
-            # Update possession frequency and recent possessions
-            for player_id in frame.possessions:
-                possession_frequency[player_id] = possession_frequency.get(
-                    player_id, 0) + 1
-            recent_possessions.append(set(frame.possessions))
+            # Sort by combined ranks, lower rank indicates better possession
+            sorted_combined_ranks = sorted(
+                combined_ranks.items(), key=lambda x: x[1])
+            frame.possessions = [player_id for player_id,
+                                 _ in sorted_combined_ranks][:3]
 
             print(f"Frame {index}: {frame.possessions}")
 
-    #TODO replace current recompute possesions with this more nuanced function
-    def compute_possession_intervals_AFK(self, window_size=30, min_interval_length=20, possession_threshold=0.8):
-        possession_history = deque(maxlen=window_size)
-        possession_intervals = []
-        current_possession = None
+    def recompute_possessions_v2(self):
+        """
+        Calculate and store the frame-by-frame score for each player based on their possession position.
+        This score is stored in a rolling window covering the last 50 frames.
+        """
+        # Initialize an empty list for rolling scores
+        self.rolling_scores = []
 
-        for frame_index, frame in enumerate(self.frames):
-            # Update possession history with weighted points
-            if frame.possessions:
-                # Assign points: 1 for first, 0.75 for second, 0.5 for third
-                for i, possessor in enumerate(frame.possessions[:3]):
-                    points = [1, 0.75, 0.5][i]
-                    possession_history.append((possessor, points))
+        for frame in self.frames:
+            # Dictionary to hold scores for each player in this frame
+            frame_scores = {}
+
+            # Assign points based on possession position (1 for 1st, 0.75 for 2nd, 0.25 for 3rd)
+            for i, player_id in enumerate(frame.possessions[:2]):
+                points = [1, 0.75, 0.25][i]
+                frame_scores[player_id] = frame_scores.get(
+                    player_id, 0) + points
+
+            # Append the scores of this frame to the rolling window
+            self.rolling_scores.append(frame_scores)
+
+    def recompute_possessions_v3(self):
+        """
+        Determine the dominant player in possession for each frame based on the rolling window of the last 50 frames.
+        """
+        # Initialize an empty list to store the dominant player for each frame
+        self.dominant_possessions = []
+
+        for i in range(len(self.frames)):
+            # Dictionary to sum up scores in the rolling window for each player
+            rolling_sum = {}
+
+            # Accumulate scores for each player in the rolling window of the last 50 frames
+            for j in range(max(0, i - 49), i + 1):
+                for player_id, score in self.rolling_scores[j].items():
+                    rolling_sum[player_id] = rolling_sum.get(
+                        player_id, 0) + score
+
+            # Determine the player with the highest score in this rolling window
+            if rolling_sum:
+                self.dominant_possessions.append(
+                    max(rolling_sum, key=rolling_sum.get))
             else:
-                possession_history.append((None, 0))
+                self.dominant_possessions.append(None)
 
-            # Count weighted possessions in the last 30 frames
-            possession_counts = defaultdict(float)
-            for possessor, points in possession_history:
-                if possessor is not None:
-                    possession_counts[possessor] += points
+    def recompute_possessions_v4(self, min_length=20):
+        """
+        Create possession intervals from the dominant players list using the Interval class.
+        Shorter intervals (less than min_length) are first dropped, then the intervals are created.
+        """
+        self.possessions = []  # List to store the intervals
+        cleaned_possessions = self._remove_short_intervals(min_length)
 
-            # Determine the player with the most possession points in the last 30 frames
-            if possession_counts:
-                most_possessor, total_points = max(
-                    possession_counts.items(), key=lambda item: item[1])
-                if total_points / sum([p for _, p in possession_history]) >= possession_threshold:
-                    # Update or create possession interval
-                    if current_possession and current_possession.playerid == most_possessor:
-                        current_possession.end = frame_index
-                    else:
-                        if current_possession and (current_possession.end - current_possession.start + 1) >= min_interval_length:
-                            possession_intervals.append(current_possession)
-                        current_possession = Interval(
-                            most_possessor, frame_index, frame_index)
-                else:
-                    if current_possession and (current_possession.end - current_possession.start + 1) >= min_interval_length:
-                        possession_intervals.append(current_possession)
-                    current_possession = None
+        current_interval = None
+
+        for i, player_id in cleaned_possessions:
+            if current_interval and player_id == current_interval.playerid:
+                current_interval.end = i
+                current_interval.length = current_interval.end - current_interval.start + 1
             else:
-                if current_possession and (current_possession.end - current_possession.start + 1) >= min_interval_length:
-                    possession_intervals.append(current_possession)
-                current_possession = None
+                if current_interval:
+                    self.possessions.append(current_interval)
+                current_interval = Interval(player_id, i, i)
 
-        # Add the last possession interval if it meets the minimum frame requirement
-        if current_possession and (current_possession.end - current_possession.start + 1) >= min_interval_length:
-            possession_intervals.append(current_possession)
+        if current_interval:
+            self.possessions.append(current_interval)
 
-        self.possessions = possession_intervals
+        print("self.possessions")
+        print(self.possessions)
 
-        return possession_intervals
-    
-    # TODO THIS SUCKS, replace
-    def compute_possession_intervals(self, consecutive_possession_threshold=8):
-        current_possession = None
-        possession_intervals = []
-        current_streak = 0
-        last_possessor = None
+    def _remove_short_intervals(self, min_length):
+        """
+        Remove short intervals from the dominant possessions list.
+        """
+        cleaned_possessions = []
+        current_player = None
+        start_index = 0
 
-        for frame_index, frame in enumerate(self.frames):
-            if frame.possessions:
-                most_likely_possessor = frame.possessions[0]
+        for i, player_id in enumerate(self.dominant_possessions):
+            if player_id != current_player:
+                if i - start_index >= min_length:
+                    for index in range(start_index, i):
+                        cleaned_possessions.append((index, current_player))
+                start_index = i
+                current_player = player_id
 
-                if last_possessor == most_likely_possessor:
-                    current_streak += 1
-                else:
-                    current_streak = 1
-                    last_possessor = most_likely_possessor
+        # Check the last interval
+        if len(self.dominant_possessions) - start_index >= min_length:
+            for index in range(start_index, len(self.dominant_possessions)):
+                cleaned_possessions.append((index, current_player))
 
-                if current_streak >= consecutive_possession_threshold:
-                    if current_possession and current_possession.playerid == most_likely_possessor:
-                        current_possession.end = frame_index
-                    elif current_possession:
-                        possession_intervals.append(current_possession)
-                        current_possession = Interval(
-                            most_likely_possessor, frame_index, frame_index)
-                    else:
-                        current_possession = Interval(
-                            most_likely_possessor, frame_index, frame_index)
-
-            '''else:  # No clear possessor in the current frame
-                current_streak = 0
-                last_possessor = None
-                if current_possession:
-                    possession_intervals.append(current_possession)
-                    current_possession = None
-            '''
-        # Add the last possession interval if it exists
-        if current_possession:
-            possession_intervals.append(current_possession)
-
-        self.possessions = possession_intervals
-
-        return possession_intervals
+        return cleaned_possessions
