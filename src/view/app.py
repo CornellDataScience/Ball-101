@@ -6,10 +6,9 @@ import streamlit as st
 import hydralit_components as hc
 import pandas as pd
 import requests
-from format import Format
+# from format import Format
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from main import main
 
 st.set_page_config(page_title="HoopTracker", page_icon=":basketball:")
 # 'set up tab tile and favicon'
@@ -38,6 +37,7 @@ def process_video(video_file):
     the processed video name into session state
     Temporarily: stores the processed video into tmp/user_upload.mp4
     """
+
     user_video: str = st.session_state.user_file
     # UPLOAD VIDEO
     if video_file is None:
@@ -57,18 +57,28 @@ def process_video(video_file):
     st.session_state.is_downloaded = False
 
     # PROCESS VIDEO
-    print("User Video", user_video)
-    # ASSUME process updates results locally for now TODO
-    r = requests.post(SERVER_URL + "results", params={})
-    if r.status_code == 200:
-        print(r.json().get("message"))
-        with open("tmp/results.txt", "r") as file:
-            st.session_state.result_string = file.read()
-        st.session_state.processed_video = "tmp/court_video_reenc.mp4"
-    else:
-        print(f"Error processing file: {r.text}")
+    try:
+        process_response = requests.post(
+            SERVER_URL + "process_vid", data={"file_name": st.session_state.upload_name}, timeout=60
+        )
+        process_response.raise_for_status()
+
+        # Handle processing response
+        if process_response.status_code == 200:
+            print("Video processing successful")
+            # Assuming the backend returns the result string or path to the processed video
+            result_data = process_response.json()
+            st.session_state.result_string = result_data.get("result_string")
+            st.session_state.processed_video = result_data.get("processed_video_path")
+            return True
+        
+        else:
+            print(f"Error processing file: {process_response.text}")
+            return False
+
+    except requests.RequestException as e:
+        print(f"Error during file processing: {e}")
         return False
-    return True
 
 
 # Pages
@@ -128,16 +138,6 @@ def results_page():
        
     )
     # st.video(open(st.session_state.processed_video, "rb").read())
- #here we need to add the call for the videos
-
-
-    response = requests.get(SERVER_URL + "video")
-    if response.status_code == 200:
-        video_bytes = response.content()  # Returns the formatted results as JSON
-        video_bytes = response
-        st.video(video_bytes)
-    else:
-        st.header ("error- Failed to retrieve data from the backend.")
 
     
     st.markdown("## Statistics")
@@ -364,7 +364,7 @@ elif st.session_state.state == 0:
 elif st.session_state.state == 1:
     loading_page()
 elif st.session_state.state == 2:
-    results_page(get_res())
+    results_page()
 else:
     error_page()
 

@@ -10,13 +10,7 @@ import boto3
 import os
 import subprocess
 from dotenv import load_dotenv
-
-import sys
-import os
-
-from ..format import Format
-
-
+from ..processing.format import Format
 
 # Amazon S3 Connection
 load_dotenv()
@@ -42,24 +36,64 @@ async def upload_file(video_file: UploadFile = File(...)):
     file_name = time.strftime("%Y%m%d-%H%M%S")
     try:
         s3.upload_fileobj(video_file.file, "ball-uploads", file_name)
+        print(file_name)
         return {"message": file_name, "status": "success"}
     except Exception as ex:
         return {"error": str(ex)}
 
 
+
+@app.post("/process_vid")
+async def process_file(file_name: str):  # Accept file name as input
+    """
+    Download video from S3, process it, and optionally upload back to S3
+    """
+    print("here")
+    local_file_name = "temp_video_file"  # Temporary local file name
+    processed_file_name = f"processed_{file_name}"  # Name for the processed file
+
+    try:
+        print("here")
+        # Download the file from S3
+        s3.download_file('ball-uploads', file_name, local_file_name)
+        print("here")
+        # Process the file
+        command = ["python", "src/main.py", "--video_file", local_file_name]
+        subprocess.run(command)
+        print("here")
+        # Upload processed file back to S3
+        with open(processed_file_name, "rb") as processed_file:
+            print("here")
+            s3.upload_fileobj(processed_file, "processed-uploads", processed_file_name)
+        print("here")
+        # Clean up local files
+        os.remove(local_file_name)
+        os.remove(processed_file_name)
+
+        return {"message": f"Successfully processed {file_name}", "status_code": 200}
+
+    except Exception as ex:
+        raise HTTPException(status_code=500, detail=str(ex))
+        print("EROROROROR")
+        return {"error": str(ex),"status_code":400}
+
+
 @app.post("/process")
-async def process_file(file_name: str):
+async def process_file(video_file: UploadFile = File(...)):
     """
     runs main to process file
     TODO change from local to cloud
     """
     try:
-
-        command = ["python", "src/main.py", "--video_file", file_name]
+        print(video_file.file)
+        command = ["python", "src/main.py", "--video_file", video_file]
         subprocess.run(command)
-        return {"message": f"successfully processed {file_name}", "status": "success"}
+        print("here111")
+        return {"message": f"successfully processed {video_file}", "status_code":400}
     except Exception as ex:
-        return {"error": str(ex)}
+        raise HTTPException(status_code=500, detail=str(ex))
+        print("EROROROROR")
+        return {"error": str(ex),"status_code":400}
 
 
 # TODO Not being used RN

@@ -2,7 +2,7 @@
 Module containing state of game statistics
 """
 from enum import Enum
-from pose_estimation.pose_estimate import KeyPointNames, AngleNames
+from .pose_estimation.pose_estimate import KeyPointNames, AngleNames
 import sys
 import math
 from collections import deque, defaultdict
