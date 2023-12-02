@@ -26,7 +26,8 @@ def main(args=DARGS) -> None:
 
     modelrunner = ModelRunner(args=args)
     if not args["skip_model"]:
-        modelrunner.run()
+        pass
+    # modelrunner.run()
 
     processrunner = ProcessRunner(args=args)
     if not args["skip_process"]:
@@ -40,11 +41,13 @@ def main(args=DARGS) -> None:
         f"==============Backend complete! Results stored in {args['output']}======================"
     )
     if not args["skip_model"]:
-        print(f"              player/rim output stored in {args['people_file']}")
+        print(
+            f"              player/rim output stored in {args['people_file']}")
         print(f"              ball output stored in {args['ball_file']}")
         print(f"              pose output stored in {args['pose_file']}")
     if not args["skip_process"]:
-        print(f"              processed video stored in {args['processed_file']}")
+        print(
+            f"              processed video stored in {args['processed_file']}")
         print(f"              results file stored in {args['results_file']}")
         if not args["skip_court"]:
             print(f"              minimap stored in {args['minimap_file']}")
@@ -57,7 +60,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--skip_model", action="store_true", help="skips model, runs from [output]"
     )
-    parser.add_argument("--skip_process", action="store_true", help="skips processing")
+    parser.add_argument("--skip_process", action="store_true",
+                        help="skips processing")
     parser.add_argument(
         "--skip_court", action="store_true", help="skips court and minimap processing"
     )
@@ -71,8 +75,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--player_weights", help="path to player/rim weights for yolov5"
     )
-    parser.add_argument("--ball_weights", help="path to ball weights for yolov5")
-    parser.add_argument("--pose_weights", help="path to pose weights for yolov8-pose")
+    parser.add_argument(
+        "--ball_weights", help="path to ball weights for yolov5")
+    parser.add_argument(
+        "--pose_weights", help="path to pose weights for yolov8-pose")
 
     args = parser.parse_args()
     args = vars(args)

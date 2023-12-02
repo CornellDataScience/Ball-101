@@ -16,13 +16,13 @@ class PossessionComputer:
         self._determine_dominant_possessions()
         self._create_possession_intervals(min_length=15)
 
-        # for interval in self.possessions:
-        # print(interval.playerid, interval.start, interval.end)
+        for interval in self.possessions:
+            print(
+                f"Player {interval.playerid}: Start {interval.start}, End {interval.end}, Length {interval.length}")
 
         return self.possessions
 
-    # TODO give no one possession during shots
-    def _compute_frame_rankings(self):
+    def _compute_frame_rankings(self, DISTANCE_THRESHOLD=100):
         """
         Compute frame-by-frame possession of the ball.
         Players are ranked based on their distance to the ball and the intersection area.
@@ -42,9 +42,11 @@ class PossessionComputer:
                 dist = player.box.distance_between_boxes(ball_box)
                 intersection_area = player.box.area_of_intersection(ball_box)
 
-                distance_ranking.append((player_id, dist))
-                # Negative area for sorting purpose
-                area_ranking.append((player_id, -intersection_area))
+                # Check if player is within range X and has intersection area
+                if dist <= DISTANCE_THRESHOLD and intersection_area > 0:
+                    distance_ranking.append((player_id, dist))
+                    # Negative area for sorting purpose
+                    area_ranking.append((player_id, -intersection_area))
 
             # Rank players by distance (lower is better) and intersection area (higher is better)
             distance_ranking.sort(key=lambda x: x[1])
@@ -63,9 +65,9 @@ class PossessionComputer:
             sorted_combined_ranks = sorted(
                 combined_ranks.items(), key=lambda x: x[1])
             frame.possessions = [player_id for player_id,
-                                 _ in sorted_combined_ranks][:3]
+                                 _ in sorted_combined_ranks][:2]
 
-            # print(f"frame {index}: {frame.possessions}")
+            print(f"frame {index}: {frame.possessions}")
 
     def _compute_rolling_scores(self):
         """
@@ -92,6 +94,7 @@ class PossessionComputer:
         """
         Determine the dominant player in possession for each frame based on the rolling window of the last 50 frames.
         """
+        LOOK_BACK_THRESHOLD = 20
         # Initialize an empty list to store the dominant player for each frame
         self.dominant_possessions = []
 
@@ -99,20 +102,24 @@ class PossessionComputer:
             # Dictionary to sum up scores in the rolling window for each player
             rolling_sum = {}
 
-            # Accumulate scores for each player in the rolling window of the last 50 frames
-            for j in range(max(0, i - 49), i + 1):
+            # Flag to check if most recent rolling score list is empty
+            is_recent_empty = not bool(self.rolling_scores[i])
+
+            # Accumulate scores for each player in the rolling window of the last 20 frames
+            for j in range(max(0, i - LOOK_BACK_THRESHOLD), i + 1):
                 for player_id, score in self.rolling_scores[j].items():
                     rolling_sum[player_id] = rolling_sum.get(
                         player_id, 0) + score
 
             # Determine the player with the highest score in this rolling window
-            if rolling_sum:
+            # Set to None if most recent rolling score list is empty
+            if is_recent_empty or not rolling_sum:
+                self.dominant_possessions.append(None)
+            else:
                 self.dominant_possessions.append(
                     max(rolling_sum, key=rolling_sum.get))
-            else:
-                self.dominant_possessions.append(None)
 
-    def _create_possession_intervals(self, min_length):
+    def _create_possession_intervals(self, min_length=15):
         """
         Create possession intervals from the dominant players list using the Interval class.
         Shorter intervals (less than min_length) are first dropped, then the intervals are created.
@@ -129,7 +136,8 @@ class PossessionComputer:
             else:
                 if current_interval:
                     self.possessions.append(current_interval)
-                current_interval = Interval(player_id, i, i)
+                    if player_id is not None:
+                        current_interval = Interval(player_id, i, i)
 
         if current_interval:
             self.possessions.append(current_interval)
