@@ -13,43 +13,55 @@ def format_results_for_api(game_state: GameState) -> str:
     Returns:
         str: A JSON string containing the formatted results.
     """
-    print("here")
-    # Use the methods from GameState to gather statistics
-    game_state.populate_team_stats()
-    print("here")
-    game_state.populate_players_stats()
-    
-    # Construct the result dictionary
+
+    # General Game Stats
     general_stats = {
-        'Number of frames': len(game_state.frames),
-        'Duration': game_state.calculate_game_duration(),
-        'Highest scoring player': game_state.identify_highest_scoring_player()
+        'Total Frames': len(game_state.frames),
+        'Number of Possessions': len(game_state.possessions),
+        'Number of Shot Attempts': len(game_state.shot_attempts)
     }
 
-    player_stats = {player_id: {
-        'Points': player_state.points,
-        'Rebounds': 0,  # Assuming you have a method to calculate this
-        'Assists': sum(player_state.passes.values())
-    } for player_id, player_state in game_state.players.items()}
+    # Player Stats
+    player_stats = {
+        player_id: {
+            'Total Frames': player_state.frames,
+            'Field Goals Attempted': player_state.field_goals_attempted,
+            'Field Goals Made': player_state.field_goals,
+            'Points Scored': player_state.points,
+            'Field Goal Percentage': player_state.field_goal_percentage,
+            'Passes': player_state.passes
+        } for player_id, player_state in game_state.players.items()
+    }
 
+    # Team Stats
     team_stats = {
         'Team 1': {
-            'Score': game_state.team1.points,
-            # 'Possession': game_state.team1.calculate_possession_percentage()  # If you have such a method
+            'Shots Attempted': game_state.team1.shots_attempted,
+            'Shots Made': game_state.team1.shots_made,
+            'Points': game_state.team1.points,
+            'Field Goal Percentage': game_state.team1.field_goal_percentage
         },
         'Team 2': {
-            'Score': game_state.team2.points,
-            # 'Possession': game_state.team2.calculate_possession_percentage()
+            'Shots Attempted': game_state.team2.shots_attempted,
+            'Shots Made': game_state.team2.shots_made,
+            'Points': game_state.team2.points,
+            'Field Goal Percentage': game_state.team2.field_goal_percentage
         }
+    }
+
+    # Ball Stats
+    ball_stats = {
+        'Ball Frames': game_state.ball.frames
     }
 
     # Combine all the stats into one dictionary
     results = {
-        'general_stats': general_stats,
-        'player_stats': player_stats,
-        'team_stats': team_stats
+        'General Stats': general_stats,
+        'Player Stats': player_stats,
+        'Team Stats': team_stats,
+        'Ball Stats': ball_stats
     }
 
     # Convert the dictionary into a JSON string
-    results_json = json
+    results_json = json.dumps(results, indent=4)
     return results_json
