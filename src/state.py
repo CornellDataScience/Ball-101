@@ -475,6 +475,8 @@ class PlayerState:
         self.points: int = 0
         self.field_goal_percentage: float = 0.0
         self.passes: dict[int] = {}
+        self.assists: int = 0
+        self.rebounds: int = 0
 
 
 class TeamStats:
@@ -662,15 +664,7 @@ class GameState:
                 self.passes.get(p).update({c: 0})
 
         i = 0
-        print("self.possessions")
-        print(self.possessions)
         for i in range(len(self.possessions) - 1):
             p1 = self.possessions[i].playerid
             p2 = self.possessions[i + 1].playerid
-
-            # Debugging: Check if p1 and p2 are in the dictionary
-            if p1 not in self.passes or p2 not in self.passes.get(p1, {}):
-                print(f"Key error with p1: {p1}, p2: {p2}")
-                continue  # Skip this iteration to avoid the error
-
             self.passes[p1][p2] += 1

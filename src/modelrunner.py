@@ -109,7 +109,8 @@ class ModelRunner:
         Runs both pose estimation and strongSORT simultaneously
         (2 strongsort passes for players/rim vs ball)
         """
-        mp.set_start_method("spawn", force=True)  # fix hanging issue of git actions
+        mp.set_start_method(
+            "spawn", force=True)  # fix hanging issue of git actions
 
         p1 = mp.Process(target=self.track_person)
         p2 = mp.Process(target=self.track_basketball)

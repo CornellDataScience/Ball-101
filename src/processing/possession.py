@@ -1,20 +1,23 @@
-
 from state import Interval
 from collections import deque
+from state import PlayerState
 
 
 class PossessionComputer:
-    def __init__(self, frames):
+    def __init__(self, frames, players):
+        self.players = players
         self.frames = frames
         self.rolling_scores = []
         self.dominant_possessions = []
         self.possessions = []
 
     def compute_possessions(self):
+        self._filter_players(threshold=min(100, len(self.frames) / 3))
         self._compute_frame_rankings()
         self._compute_rolling_scores()
         self._determine_dominant_possessions()
-        self._create_possession_intervals(min_length=15)
+        self._create_possession_intervals(min_length=15, min_length_none=5)
+        self._filter_intervals()
 
         for interval in self.possessions:
             print(
@@ -28,6 +31,8 @@ class PossessionComputer:
         Players are ranked based on their distance to the ball and the intersection area.
         The ranks are added together, and the player with the lowest score is considered
         the most likely possessor.
+        Only consider players within a distance of X from the ball and who have a non-zero
+        intersection area with the ball.
         """
         for index, frame in enumerate(self.frames):
             if frame.ball is None:
@@ -65,9 +70,9 @@ class PossessionComputer:
             sorted_combined_ranks = sorted(
                 combined_ranks.items(), key=lambda x: x[1])
             frame.possessions = [player_id for player_id,
-                                 _ in sorted_combined_ranks][:2]
+                                 _ in distance_ranking][:2]
 
-            print(f"frame {index}: {frame.possessions}")
+            # print(f"frame {index}: {frame.possessions}")
 
     def _compute_rolling_scores(self):
         """
@@ -94,7 +99,6 @@ class PossessionComputer:
         """
         Determine the dominant player in possession for each frame based on the rolling window of the last 50 frames.
         """
-        LOOK_BACK_THRESHOLD = 20
         # Initialize an empty list to store the dominant player for each frame
         self.dominant_possessions = []
 
@@ -102,24 +106,20 @@ class PossessionComputer:
             # Dictionary to sum up scores in the rolling window for each player
             rolling_sum = {}
 
-            # Flag to check if most recent rolling score list is empty
-            is_recent_empty = not bool(self.rolling_scores[i])
-
             # Accumulate scores for each player in the rolling window of the last 20 frames
-            for j in range(max(0, i - LOOK_BACK_THRESHOLD), i + 1):
+            for j in range(max(0, i - 20), i + 1):
                 for player_id, score in self.rolling_scores[j].items():
                     rolling_sum[player_id] = rolling_sum.get(
                         player_id, 0) + score
 
             # Determine the player with the highest score in this rolling window
-            # Set to None if most recent rolling score list is empty
-            if is_recent_empty or not rolling_sum:
-                self.dominant_possessions.append(None)
-            else:
+            if rolling_sum:
                 self.dominant_possessions.append(
                     max(rolling_sum, key=rolling_sum.get))
+            else:
+                self.dominant_possessions.append(None)
 
-    def _create_possession_intervals(self, min_length=15):
+    def _create_possession_intervals(self, min_length, min_length_none):
         """
         Create possession intervals from the dominant players list using the Interval class.
         Shorter intervals (less than min_length) are first dropped, then the intervals are created.
@@ -136,15 +136,18 @@ class PossessionComputer:
             else:
                 if current_interval:
                     self.possessions.append(current_interval)
-                    if player_id is not None:
-                        current_interval = Interval(player_id, i, i)
+                current_interval = Interval(player_id, i, i)
 
         if current_interval:
             self.possessions.append(current_interval)
 
-    def _remove_short_intervals(self, min_length):
+        self.possessions = [
+            interval for interval in self.possessions if interval.playerid is not None]
+
+    def _remove_short_intervals(self, min_length, min_length_none=5):
         """
-        Remove short intervals from the dominant possessions list. Helper function for _create_possession_intervals
+        Remove short intervals from the dominant possessions list. Helper function for _create_possession_intervals.
+        Different minimum lengths are used for None player IDs and valid player IDs.
         """
         cleaned_possessions = []
         current_player = None
@@ -152,18 +155,50 @@ class PossessionComputer:
 
         for i, player_id in enumerate(self.dominant_possessions):
             if player_id != current_player:
-                if i - start_index >= min_length:
+                # Determine the minimum length based on whether the player ID is None
+                current_min_length = min_length_none if current_player is None else min_length
+
+                if i - start_index >= current_min_length:
                     for index in range(start_index, i):
                         cleaned_possessions.append((index, current_player))
                 start_index = i
                 current_player = player_id
 
         # Check the last interval
-        if len(self.dominant_possessions) - start_index >= min_length:
+        # Determine the minimum length for the last interval
+        final_min_length = min_length_none if current_player is None else min_length
+        if len(self.dominant_possessions) - start_index >= final_min_length:
             for index in range(start_index, len(self.dominant_possessions)):
                 cleaned_possessions.append((index, current_player))
 
         return cleaned_possessions
+
+    def _filter_intervals(self):
+        """
+        Filter out intervals that are not about a valid player.
+        """
+        self.possessions = [
+            interval for interval in self.possessions if interval.playerid is not None and interval.playerid in list(self.players.keys())]
+
+    def recompute_frame_count(self):
+        "recompute frame count of all players in frames"
+        for ps in self.players.values():  # reset to 0
+            ps.frames = 0
+        for frame in self.frames:
+            for pid in frame.players:
+                if pid not in self.players:
+                    self.players.update({pid: PlayerState()})
+                self.players.get(pid).frames += 1
+
+    def _filter_players(self, threshold: int):
+        "removes all players which appear for less than [threshold] frames"
+        self.recompute_frame_count()
+        for k in list(self.players.keys()):
+            v: PlayerState = self.players.get(k)
+            if v.frames < threshold:
+                self.players.pop(k, None)
+                for frame in self.frames:
+                    frame.players.pop(k, None)
 
 
 '''
