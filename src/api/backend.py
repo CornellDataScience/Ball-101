@@ -3,7 +3,7 @@ Backend module built in FastAPI
 """
 import time
 import io
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Request
 from fastapi.responses import StreamingResponse
 import pandas as pd
 import boto3
@@ -11,6 +11,11 @@ import os
 import subprocess
 from dotenv import load_dotenv
 from ..processing.format import Format
+
+from pydantic import BaseModel
+
+class ProcessVideoRequest(BaseModel):
+    file_name: str
 
 # Amazon S3 Connection
 load_dotenv()
@@ -30,25 +35,34 @@ async def root():
 
 @app.post("/upload")
 async def upload_file(video_file: UploadFile = File(...)):
+    print("here-upload")
     """
     Upload video file to S3 bucket
     """
     file_name = time.strftime("%Y%m%d-%H%M%S")
+    print(file_name)
+    print(video_file)
+    
     try:
+        print("enter try")
         s3.upload_fileobj(video_file.file, "ball-uploads", file_name)
+        print("successful upload")
         print(file_name)
         return {"message": file_name, "status": "success"}
     except Exception as ex:
+        # raise HTTPException(status_code=500, detail=str(ex))
         return {"error": str(ex)}
 
 
 
 @app.post("/process_vid")
-async def process_file(file_name: str):  # Accept file name as input
+async def process_file(file_name: str): # Accept file name as input
+ # This will print the raw JSON data sent to the endpoint
     """
     Download video from S3, process it, and optionally upload back to S3
     """
     print("here")
+    print(file_name) 
     local_file_name = "temp_video_file"  # Temporary local file name
     processed_file_name = f"processed_{file_name}"  # Name for the processed file
 
