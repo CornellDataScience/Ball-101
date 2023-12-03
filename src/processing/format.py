@@ -1,9 +1,7 @@
-# results_formatter.py
+# format.py
 from ..state import GameState  # Adjust the import according to your project structure
 
-
 def results(game_state: GameState) -> str:
-
     """
     Takes a GameState object and formats its contents into plain text, then returns the text content.
 
@@ -28,7 +26,9 @@ def results(game_state: GameState) -> str:
         results_str += f"  Field Goals Made: {player_state.field_goals}\n"
         results_str += f"  Points Scored: {player_state.points}\n"
         results_str += f"  Field Goal Percentage: {player_state.field_goal_percentage}\n"
-        results_str += f"  Passes: {player_state.passes}\n\n"
+        results_str += f"  Passes: {sum(player_state.passes.values())}\n"
+        results_str += f"  Assists: {player_state.assists}\n"
+        results_str += f"  Rebounds: {player_state.rebounds}\n\n"
 
     # Format Team Stats
     results_str += "Team Stats:\n"
