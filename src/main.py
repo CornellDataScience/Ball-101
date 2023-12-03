@@ -32,7 +32,7 @@ def main(args=DARGS) -> None:
     if not args["skip_process"]:
         processrunner.run()
 
-    results = processrunner.get_results()
+    results = processrunner.get_res()
     with open(args["results_file"], "w") as f:
         f.write(results)
 

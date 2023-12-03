@@ -137,51 +137,39 @@ def loading_page():
 
 
 def results_page():
-    st.markdown(
-        """
-        # Results
-        These are the results. Here's the processed video and a minimap of the player positions.
-        """
-       
-    )
-    # st.video(open(st.session_state.processed_video, "rb").read())
+    st.markdown("## Results\nThese are the results. Here's the processed video and a minimap of the player positions.")
 
-    
+    # Assuming the processed video is stored in st.session_state.processed_video
+    if st.session_state.processed_video:
+        st.video(open(st.session_state.processed_video, "rb").read())
+
     st.markdown("## Statistics")
-    fetch_and_display_results()
+
+    # Read and display the contents of the results file
+    try:
+        with open("tmp/results.txt", "r") as file:
+            results_data = file.readlines()
+
+        # Parse the file contents into a table format
+        # This part depends on the exact format of your results.txt
+        # Here is an example for a simple key-value pair format
+        results_table = [line.split(": ") for line in results_data if ": " in line]
+        st.table(results_table)
+
+    except FileNotFoundError:
+        st.error("Results file not found.")
 
     st.download_button(
         label="Download Results",
         use_container_width=True,
-        data=st.session_state.result_string,
-        file_name="tmp/r.txt",
+        data=st.session_state.result_string if st.session_state.result_string else "",
+        file_name="results.txt",
     )
-  
 
     st.button(label="Back to Home", on_click=change_state, args=(0,), type="primary")
 
 
 
-
-def fetch_and_display_results():
-    try:
-        response = requests.get(SERVER_URL + "results")
-        if response.status_code == 200:
-            results = response.text
-
-            # Option to write to a local file
-            with open('local_results.txt', 'w') as file:
-                file.write(results)
-
-            # Display results in Streamlit app
-            st.text_area("Results", results, height=300)
-
-        else:
-            st.error(f"Failed to retrieve data: {response.status_code}")
-
-    except requests.RequestException as e:
-        st.error(f"Request failed: {e}")
-    
 def tips_page():
     """
     Loads tips page

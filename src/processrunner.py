@@ -3,8 +3,9 @@ Runner module for processing and statistics
 """
 import state
 from state import GameState
-from processing import parse, court, render, shot, team, video, trendline, action
+from processing import parse, court, render, shot, team, video, trendline, action, format
 from args import DARGS
+
 
 
 class ProcessRunner:
@@ -55,6 +56,9 @@ class ProcessRunner:
         homography = c.get_homography()
         self.run_video_render(homography)
 
+    def get_res(self):
+        return format.results(self.state)
+
     def run_video_render(self, homography):
         """Runs video rendering and reencodes, stores to output_video_path_reenc."""
         if self.args["skip_court"]:
@@ -88,10 +92,16 @@ class ProcessRunner:
         print("trendline processing complete!")
         self.run_shot_detect()
         print("shot detection complete!")
+
         self.run_courtline_detect()
         print("court detection and render complete!")
+        
+        self.get_res()
+        print("format complete!")
+
         self.run_video_processor()
         print("stats video render complete!")
+
 
     def get_results(self):
         """

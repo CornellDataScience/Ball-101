@@ -12,7 +12,7 @@ from ..state import GameState
 import os
 import subprocess
 from dotenv import load_dotenv
-from ..processing.format import Format
+
 
 from pydantic import BaseModel
 
@@ -130,20 +130,13 @@ async def download_file(file_name: str, download_path: str):
 
 
 
-@app.get("/results")
-async def get_formatted_results() -> str:
-    try:
+# @app.get("/results")
+# async def get_results() -> str:
+#     try:
        
-  
 
-        # Get the formatted results as a string
-        formatted_results = Format.results()
-
-        # Return the formatted results
-        return formatted_results
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 @app.get("/video")
 async def get_videos():
     file_path = 'tmp/minimap.mp4'
