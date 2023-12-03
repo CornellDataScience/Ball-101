@@ -57,7 +57,10 @@ class ProcessRunner:
         self.run_video_render(homography)
 
     def get_res(self):
-        return format.results(self.state)
+        formatted_results = format.results(self.state)
+        with open("results.txt", "w") as file:
+            file.write(formatted_results)
+        return formatted_results
 
     def run_video_render(self, homography):
         """Runs video rendering and reencodes, stores to output_video_path_reenc."""
