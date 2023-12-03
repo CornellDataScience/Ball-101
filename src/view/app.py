@@ -158,6 +158,18 @@ def results_page():
 
     except FileNotFoundError:
         st.error("Results file not found.")
+    st.markdown("## MiniMap")
+    try:
+        video_file_path = 'tmp/minimap_temp.mp4'
+        st.video(video_file_path)
+    except Exception as e: 
+        st.error("Minimap video not found.")
+    st.markdown("## Processed Video")
+    try:
+        p_video_file_path = 'tmp/processed.mp4'
+        st.video(p_video_file_path)
+    except Exception as e:
+        st.error("Processed video not found.")
 
     st.download_button(
         label="Download Results",
