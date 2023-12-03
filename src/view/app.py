@@ -160,7 +160,7 @@ def results_page():
         st.error("Results file not found.")
     st.markdown("## MiniMap")
     try:
-        video_file_path = 'tmp/minimap_temp.mp4'
+        video_file_path = 'tmp/minimap.mp4'
         st.video(video_file_path)
     except Exception as e: 
         st.error("Minimap video not found.")
