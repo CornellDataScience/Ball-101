@@ -3,10 +3,12 @@ Backend module built in FastAPI
 """
 import time
 import io
-from fastapi import FastAPI, File, UploadFile, HTTPException, Request
+from fastapi import FastAPI, File, UploadFile, HTTPException, Response
+from fastapi.responses import FileResponse
 from fastapi.responses import StreamingResponse
 import pandas as pd
 import boto3
+from ..state import GameState
 import os
 import subprocess
 from dotenv import load_dotenv
@@ -45,12 +47,12 @@ async def upload_file(video_file: UploadFile = File(...)):
     
     try:
         print("enter try")
-        s3.upload_fileobj(video_file.file, "ball-uploads", file_name)
+        s3.upload_fileobj(video_file.file, "hooptracker-uploads", file_name)
         print("successful upload")
         print(file_name)
         return {"message": file_name, "status": "success"}
     except Exception as ex:
-        # raise HTTPException(status_code=500, detail=str(ex))
+        raise HTTPException(status_code=500, detail=str(ex))
         return {"error": str(ex)}
 
 
@@ -69,20 +71,21 @@ async def process_file(file_name: str): # Accept file name as input
     try:
         print("here")
         # Download the file from S3
-        s3.download_file('ball-uploads', file_name, local_file_name)
-        print("here")
+        s3.download_file('hooptracker-uploads', file_name, local_file_name)
+        print("successful download")
         # Process the file
         command = ["python", "src/main.py", "--video_file", local_file_name]
+        print("successful processing 1")
         subprocess.run(command)
-        print("here")
+        print("successful processing 2")
         # Upload processed file back to S3
-        with open(processed_file_name, "rb") as processed_file:
-            print("here")
-            s3.upload_fileobj(processed_file, "processed-uploads", processed_file_name)
-        print("here")
+        # with open(processed_file_name, "rb") as processed_file:
+        #     print("here")
+        #     s3.upload_fileobj(processed_file, "hooptracker-uploads", processed_file_name)
+        # print("here")
         # Clean up local files
-        os.remove(local_file_name)
-        os.remove(processed_file_name)
+        # os.remove(local_file_name)
+        # os.remove(processed_file_name)
 
         return {"message": f"Successfully processed {file_name}", "status_code": 200}
 
@@ -128,15 +131,19 @@ async def download_file(file_name: str, download_path: str):
 
 
 @app.get("/results")
-async def get_formatted_results():
+async def get_formatted_results() -> str:
     try:
-        # Assuming the Format.results() method returns the formatted data as JSON
-        formatted_data = Format.results()
-        return formatted_data
+       
+  
+
+        # Get the formatted results as a string
+        formatted_results = Format.results()
+
+        # Return the formatted results
+        return formatted_results
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-
 @app.get("/video")
 async def get_videos():
     file_path = 'tmp/minimap.mp4'

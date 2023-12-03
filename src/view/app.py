@@ -48,8 +48,8 @@ def process_video(video_file):
     if r.status_code == 200:
         print("Successfully uploaded file")
         data = r.json()
-        st.session_state.upload_name = "temp_file"
-        # st.session_state.upload_name = data.get("message")
+    
+        st.session_state.upload_name = data.get("message")
         print(st.session_state.upload_name)
         print("Successfully printed file")
         with open(user_video, "wb") as f:  # TODO is local write; temp fix
@@ -70,10 +70,13 @@ def process_video(video_file):
         # Handle processing response
         if process_response.status_code == 200:
             print("Video processing successful")
+            if st.session_state.result_string is None:
+                print("Warning: result_string is None")
+            elif st.session_state.result_string == "":
+                print("Warning: result_string is empty")
+
             # Assuming the backend returns the result string or path to the processed video
             result_data = process_response.json()
-            st.session_state.result_string = result_data.get("result_string")
-            st.session_state.processed_video = result_data.get("processed_video_path")
             return True
         
         else:
@@ -145,15 +148,13 @@ def results_page():
 
     
     st.markdown("## Statistics")
-    formatted_results = get_formatted_results()
-    if formatted_results:
-        st.json(formatted_results)
-    process_results()
+    fetch_and_display_results()
+
     st.download_button(
         label="Download Results",
         use_container_width=True,
         data=st.session_state.result_string,
-        file_name="results.txt",
+        file_name="tmp/r.txt",
     )
   
 
@@ -161,15 +162,25 @@ def results_page():
 
 
 
-def get_formatted_results():
+
+def fetch_and_display_results():
     try:
         response = requests.get(SERVER_URL + "results")
         if response.status_code == 200:
-            return response.json()  # Returns the formatted results as JSON
+            results = response.text
+
+            # Option to write to a local file
+            with open('local_results.txt', 'w') as file:
+                file.write(results)
+
+            # Display results in Streamlit app
+            st.text_area("Results", results, height=300)
+
         else:
-            return {"error": "Failed to retrieve data from the backend."}
+            st.error(f"Failed to retrieve data: {response.status_code}")
+
     except requests.RequestException as e:
-        return {"error": str(e)}
+        st.error(f"Request failed: {e}")
     
 def tips_page():
     """
@@ -204,14 +215,7 @@ def get_res():
         return None
 
     
-def results_api(video_file):
-    if video_file is not None:
-        r = requests.post(
-        SERVER_URL + "result", files={"video_file": video_file}, timeout=60
-        )
-    
-    results = r.json()
-    st.write(results)
+
 def error_page():
     """
     Loads error page

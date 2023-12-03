@@ -1,67 +1,48 @@
 # results_formatter.py
-import json
-from ..state import GameState  # Assuming GameState class is in state.py
+from ..state import GameState  # Adjust the import according to your project structure
+
 class Format:
-    def results():
-        return format_results_for_api(GameState)
-def format_results_for_api(game_state: GameState) -> str:
-    """
-    Takes a GameState object and formats the results into a JSON string for API output.
-    Args:
-        game_state (GameState): The game state object containing all the game data.
-    
-    Returns:
-        str: A JSON string containing the formatted results.
-    """
+    @staticmethod
+    def results() -> str:
+        game_state= GameState
+        """
+        Takes a GameState object and formats its contents into plain text, then returns the text content.
 
-    # General Game Stats
-    general_stats = {
-        'Total Frames': len(game_state.frames),
-        'Number of Possessions': len(game_state.possessions),
-        'Number of Shot Attempts': len(game_state.shot_attempts)
-    }
+        Args:
+            game_state (GameState): The game state object containing all game data.
 
-    # Player Stats
-    player_stats = {
-        player_id: {
-            'Total Frames': player_state.frames,
-            'Field Goals Attempted': player_state.field_goals_attempted,
-            'Field Goals Made': player_state.field_goals,
-            'Points Scored': player_state.points,
-            'Field Goal Percentage': player_state.field_goal_percentage,
-            'Passes': player_state.passes
-        } for player_id, player_state in game_state.players.items()
-    }
+        Returns:
+            str: The content of the formatted results.
+        """
+        # Format the results into a plain text string
+        results_str = "General Game Stats:\n"
+        results_str += f"Total Frames: {len(game_state.frames)}\n"
+        results_str += f"Number of Possessions: {len(game_state.possessions)}\n"
+        results_str += f"Number of Shot Attempts: {len(game_state.shot_attempts)}\n\n"
 
-    # Team Stats
-    team_stats = {
-        'Team 1': {
-            'Shots Attempted': game_state.team1.shots_attempted,
-            'Shots Made': game_state.team1.shots_made,
-            'Points': game_state.team1.points,
-            'Field Goal Percentage': game_state.team1.field_goal_percentage
-        },
-        'Team 2': {
-            'Shots Attempted': game_state.team2.shots_attempted,
-            'Shots Made': game_state.team2.shots_made,
-            'Points': game_state.team2.points,
-            'Field Goal Percentage': game_state.team2.field_goal_percentage
-        }
-    }
+        # Format Player Stats
+        results_str += "Player Stats:\n"
+        for player_id, player_state in game_state.players.items():
+            results_str += f"Player {player_id}:\n"
+            results_str += f"  Total Frames: {player_state.frames}\n"
+            results_str += f"  Field Goals Attempted: {player_state.field_goals_attempted}\n"
+            results_str += f"  Field Goals Made: {player_state.field_goals}\n"
+            results_str += f"  Points Scored: {player_state.points}\n"
+            results_str += f"  Field Goal Percentage: {player_state.field_goal_percentage}\n"
+            results_str += f"  Passes: {player_state.passes}\n\n"
 
-    # Ball Stats
-    ball_stats = {
-        'Ball Frames': game_state.ball.frames
-    }
+        # Format Team Stats
+        results_str += "Team Stats:\n"
+        for team_id, team_state in [('Team 1', game_state.team1), ('Team 2', game_state.team2)]:
+            results_str += f"{team_id}:\n"
+            results_str += f"  Shots Attempted: {team_state.shots_attempted}\n"
+            results_str += f"  Shots Made: {team_state.shots_made}\n"
+            results_str += f"  Points: {team_state.points}\n"
+            results_str += f"  Field Goal Percentage: {team_state.field_goal_percentage}\n\n"
 
-    # Combine all the stats into one dictionary
-    results = {
-        'General Stats': general_stats,
-        'Player Stats': player_stats,
-        'Team Stats': team_stats,
-        'Ball Stats': ball_stats
-    }
+        # Format Ball Stats
+        results_str += "Ball Stats:\n"
+        results_str += f"Ball Frames: {game_state.ball.frames}\n"
 
-    # Convert the dictionary into a JSON string
-    results_json = json.dumps(results, indent=4)
-    return results_json
+        # Return the results string
+        return results_str
