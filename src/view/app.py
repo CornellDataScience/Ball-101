@@ -143,21 +143,34 @@ def results_page():
     if st.session_state.processed_video:
         st.video(open(st.session_state.processed_video, "rb").read())
 
-    st.markdown("## Statistics")
+st.markdown("## Statistics")
 
-    # Read and display the contents of the results file
-    try:
-        with open("tmp/results.txt", "r") as file:
-            results_data = file.readlines()
+try:
+    with open("tmp/results.txt", "r") as file:
+        results_data = file.readlines()
 
-        # Parse the file contents into a table format
-        # This part depends on the exact format of your results.txt
-        # Here is an example for a simple key-value pair format
-        results_table = [line.split(": ") for line in results_data if ": " in line]
+    current_section = None
+    results_table = []
+
+    # Process each line in the file
+    for line in results_data:
+        line = line.strip()
+        if line.endswith(":"):  # Check if the line is a section header
+            if results_table:  # Display the previous section's table, if any
+                st.markdown(f"### {current_section}")
+                st.table(results_table)
+                results_table = []  # Reset for the next section
+            current_section = line[:-1]  # Set the new section header
+        elif ": " in line:
+            results_table.append(line.split(": "))
+
+    # Display the last section's table
+    if results_table:
+        st.markdown(f"### {current_section}")
         st.table(results_table)
 
-    except FileNotFoundError:
-        st.error("Results file not found.")
+except FileNotFoundError:
+    st.error("Results file not found.")
     st.markdown("## MiniMap")
     try:
         video_file_path = 'tmp/minimap.mp4'
