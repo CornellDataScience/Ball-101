@@ -201,12 +201,44 @@ def results_page():
     # st.video(open(st.session_state.processed_video, "rb").read())
 
     st.markdown("## Statistics")
-    process_results()
+    try:
+        with open("tmp/results-" + st.session_state.upload_name + ".txt", "r") as file:
+            results_data = file.readlines()
+
+        current_section = None
+        results_table = []
+
+        # Process each line in the file
+        for line in results_data:
+            line = line.strip()
+            if line.endswith(":"):  # Check if the line is a section header
+                if results_table:  # Display the previous section's table, if any
+                    st.markdown(f"### {current_section}")
+                    st.table(results_table)
+                    results_table = []  # Reset for the next section
+                current_section = line[:-1]  # Set the new section header
+            elif ": " in line:
+                results_table.append(line.split(": "))
+
+        # Display the last section's table
+        if results_table:
+            st.markdown(f"### {current_section}")
+            st.table(results_table)
+
+    except FileNotFoundError:
+        st.error("Results file not found.")
+    st.markdown("## Processed Video")
+    try:
+        p_video_file_path = "tmp/court_video_reenc-" + st.session_state.upload_name + ".mp4"
+        st.video(p_video_file_path)
+        st.video(st.session_state.processed_video)
+    except Exception as e:
+        st.error("Processed video not found.")
     st.download_button(
         label="Download Results",
         use_container_width=True,
         data=st.session_state.result_string,
-        file_name="results.txt",
+        file_name="tmp/results-" + st.session_state.upload_name + ".txt",
     )
 
     st.button(label="Back to Home", on_click=change_state, args=(0,), type="primary")
