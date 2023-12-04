@@ -53,9 +53,10 @@ def process_video(video_file):
     if r.status_code == 200:
         print("Successfully uploaded file")
         data = r.json()
+        print(data)
         st.session_state.upload_name = data.get("message")
-        # with open(user_video, "wb") as f:  # TODO is local write; temp fix
-        #     f.write(video_file.getvalue())
+        with open(user_video, "wb") as f:  # TODO is local write; temp fix
+            f.write(video_file.getvalue())
     else:
         print("Error uploading file")  # TODO make an error handler in frontend
         return False
@@ -188,7 +189,7 @@ def loading_page():
 
     # Load results page when done
     change_state(state)
-    st.experimental_rerun()
+    st.rerun()
 
 
 def results_page():
