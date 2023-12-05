@@ -94,8 +94,8 @@ class ProcessRunner:
         self.run_shot_detect()
         print("shot detection complete!")
 
-        self.run_courtline_detect()
-        print("court detection and render complete!")
+        # self.run_courtline_detect()
+        # print("court detection and render complete!")
         self.run_video_processor()
         print("stats video render complete!")
 
