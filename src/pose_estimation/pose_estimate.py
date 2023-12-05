@@ -79,8 +79,8 @@ def write_to(out_file, results):
         if result.boxes is None:
             continue
         boxes = result.boxes
-        xywh = boxes.xywh.numpy()
-        xy = result.keypoints.xy.numpy()
+        xywh = boxes.xywh.cpu().numpy()
+        xy = result.keypoints.xy.cpu().numpy()
         n, _, _ = xy.shape
         for j in range(n):
             s = str(frameno)
